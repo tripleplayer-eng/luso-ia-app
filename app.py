@@ -10,22 +10,28 @@ st.markdown("""
 <style>
     iframe { display: block; margin: 0 auto; }
     h1 { text-align: center; }
-    /* Ajuste para os botões ficarem bonitos */
+    /* Botão de gerar vibrante */
     .stButton button { 
         width: 100%; 
         border-radius: 12px; 
         font-weight: bold; 
-        background-color: #2563eb; 
+        background: linear-gradient(to right, #2563eb, #4f46e5); 
         color: white; 
-        padding: 0.5rem 1rem;
+        padding: 0.7rem 1rem;
         border: none;
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-        transition: all 0.2s;
+        box-shadow: 0 4px 10px rgba(37, 99, 235, 0.2);
+        transition: all 0.3s ease;
     }
     .stButton button:hover { 
-        background-color: #1d4ed8; 
         transform: translateY(-2px);
-        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+        box-shadow: 0 8px 20px rgba(37, 99, 235, 0.4);
+    }
+    /* Legenda mais bonita */
+    .caption-text {
+        text-align: center;
+        color: #64748b;
+        font-size: 1.1rem;
+        margin-bottom: 20px;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -74,7 +80,8 @@ if check_password():
         except: st.write("🌍")
     with col2:
         st.title("Luso-IA Global")
-        st.caption("Selecione a rede clicando no ícone.")
+        # FRASE DE CHAMADA À AÇÃO (CTA) MELHORADA
+        st.markdown('<p class="caption-text">🚀 Transforme ideias simples em posts virais em segundos.</p>', unsafe_allow_html=True)
 
     try:
         api_key = st.secrets["GOOGLE_API_KEY"]
@@ -84,21 +91,20 @@ if check_password():
         st.error("Erro Crítico: API Key em falta.")
         st.stop()
 
-    # --- 1. SELETOR DE REDE (ÍCONES CORRIGIDOS E QUADRADOS) ---
+    # --- 1. SELETOR DE REDE ---
     st.write("### 1. Onde vai publicar?")
     
-    # Usei links específicos de ícones QUADRADOS para alinharem bem
     rede_selecionada = image_select(
         label="",
         images=[
-            "https://upload.wikimedia.org/wikipedia/commons/thumb/a/a5/Instagram_icon.png/600px-Instagram_icon.png", # Insta
-            "https://upload.wikimedia.org/wikipedia/commons/thumb/6/6b/WhatsApp.svg/1024px-WhatsApp.svg.png", # Whatsapp
-            "https://upload.wikimedia.org/wikipedia/commons/c/ca/LinkedIn_logo_initials.png", # LinkedIn (IN)
-            "https://upload.wikimedia.org/wikipedia/commons/thumb/0/09/YouTube_full-color_icon_%282017%29.svg/1024px-YouTube_full-color_icon_%282017%29.svg.png", # YouTube (Só o Play)
-            "https://upload.wikimedia.org/wikipedia/commons/thumb/3/34/Ionic_Logo_TikTok.svg/512px-Ionic_Logo_TikTok.svg.png", # TikTok (Só a Nota)
-            "https://upload.wikimedia.org/wikipedia/commons/5/51/Facebook_f_logo_%282019%29.svg", # Facebook
-            "https://upload.wikimedia.org/wikipedia/commons/c/ce/X_logo_2023.svg", # X
-            "https://cdn-icons-png.flaticon.com/512/10009/10009247.png", # Blog
+            "https://cdn-icons-png.flaticon.com/512/2111/2111463.png", # Instagram
+            "https://cdn-icons-png.flaticon.com/512/733/733585.png",   # WhatsApp
+            "https://cdn-icons-png.flaticon.com/512/174/174857.png",   # LinkedIn
+            "https://cdn-icons-png.flaticon.com/512/1384/1384060.png", # YouTube
+            "https://cdn-icons-png.flaticon.com/512/3046/3046121.png", # TikTok
+            "https://cdn-icons-png.flaticon.com/512/5968/5968764.png", # Facebook
+            "https://cdn-icons-png.flaticon.com/512/5969/5969020.png", # X
+            "https://cdn-icons-png.flaticon.com/512/4922/4922073.png", # Blog
         ],
         captions=["Instagram", "WhatsApp", "LinkedIn", "YouTube", "TikTok", "Facebook", "X / Twitter", "Blog"],
         index=0,
@@ -111,9 +117,19 @@ if check_password():
         st.write("### 2. Detalhes")
         col_a, col_b = st.columns(2)
         with col_a:
+            # LISTA DE PAÍSES COM BANDEIRAS
             pais = st.selectbox("País Alvo", 
-                ["Portugal (PT-PT)", "Brasil (PT-BR)", "Angola (PT-AO)", "Moçambique (PT-MZ)", 
-                 "Cabo Verde (PT-CV)", "Guiné-Bissau (PT-GW)", "São Tomé e Príncipe (PT-ST)", "Timor-Leste (PT-TL)"])
+                [
+                    "🇵🇹 Portugal (PT-PT)", 
+                    "🇧🇷 Brasil (PT-BR)", 
+                    "🇦🇴 Angola (PT-AO)", 
+                    "🇲🇿 Moçambique (PT-MZ)", 
+                    "🇨🇻 Cabo Verde (PT-CV)", 
+                    "🇬🇼 Guiné-Bissau (PT-GW)", 
+                    "🇸🇹 São Tomé e Príncipe (PT-ST)", 
+                    "🇹🇱 Timor-Leste (PT-TL)"
+                ]
+            )
         with col_b:
             tom = st.selectbox("Tom", ["Profissional", "Divertido", "Vendas/Promoção", "Storytelling", "Institucional"])
             
@@ -124,21 +140,20 @@ if check_password():
 
     # --- 3. RESULTADO ---
     if btn and negocio:
-        # Lógica de deteção
         rede_nome = "Rede Social"
-        if "Instagram" in rede_selecionada: rede_nome = "Instagram"
-        elif "WhatsApp" in rede_selecionada: rede_nome = "WhatsApp"
-        elif "LinkedIn" in rede_selecionada: rede_nome = "LinkedIn"
-        elif "YouTube" in rede_selecionada: rede_nome = "YouTube Shorts"
-        elif "TikTok" in rede_selecionada: rede_nome = "TikTok"
-        elif "Facebook" in rede_selecionada: rede_nome = "Facebook"
-        elif "X_logo" in rede_selecionada: rede_nome = "X (Twitter)"
+        if "2111463" in rede_selecionada: rede_nome = "Instagram"
+        elif "733585" in rede_selecionada: rede_nome = "WhatsApp"
+        elif "174857" in rede_selecionada: rede_nome = "LinkedIn"
+        elif "1384060" in rede_selecionada: rede_nome = "YouTube Shorts"
+        elif "3046121" in rede_selecionada: rede_nome = "TikTok"
+        elif "5968764" in rede_selecionada: rede_nome = "Facebook"
+        elif "5969020" in rede_selecionada: rede_nome = "X (Twitter)"
         else: rede_nome = "Blog Post"
 
         with st.spinner(f"A criar para {rede_nome} em {pais}..."):
             
             prompt = f"""
-            Atua como Copywriter Sénior e Gestor de Redes Sociais. Modelo: {modelo_ativo}.
+            Atua como Copywriter Sénior. Modelo: {modelo_ativo}.
             
             CONTEXTO:
             - País: {pais}
@@ -162,6 +177,7 @@ if check_password():
                 response = model.generate_content(prompt)
                 
                 st.success("Conteúdo Gerado com Sucesso!")
+                st.markdown(f"**Formato:** {rede_nome} • **Mercado:** {pais}")
                 
                 st.markdown(
                     f"""
@@ -179,7 +195,10 @@ if check_password():
     # --- RODAPÉ ---
     st.markdown("---")
     p, i = get_price_info(pais)
-    st.markdown(f"<div style='text-align: center; color: gray;'>Licença ativa: {pais.split('(')[0]} • Plano: {p}</div>", unsafe_allow_html=True)
+    # Limpeza visual da string do país para o rodapé (tirar a bandeira e o código)
+    pais_limpo = pais.split('(')[0].replace('🇵🇹','').replace('🇧🇷','').replace('🇦🇴','').replace('🇲🇿','').replace('🇨🇻','').replace('🇬🇼','').replace('🇸🇹','').replace('🇹🇱','').strip()
+    
+    st.markdown(f"<div style='text-align: center; color: gray;'>Licença ativa: {pais_limpo} • Plano: {p}</div>", unsafe_allow_html=True)
     
     st.markdown(f"""
     <div style="text-align: center; margin-top: 10px;">
