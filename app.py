@@ -2,10 +2,10 @@ import streamlit as st
 import google.generativeai as genai
 import os
 
-# CONFIGURAÇÃO VISUAL
-st.set_page_config(page_title="Luso-IA Diagnóstico", page_icon="🛠️", layout="centered")
+# CONFIGURAÇÃO
+st.set_page_config(page_title="Luso-IA System", page_icon="⚙️")
 
-# --- SEGURANÇA (Senha: LUSOIA2025) ---
+# --- SEGURANÇA ---
 def check_password():
     if "password_correct" not in st.session_state:
         st.session_state.password_correct = False
@@ -22,45 +22,57 @@ def check_password():
         return True
 
 if check_password():
-    col1, col2 = st.columns([1, 5])
-    with col1:
-        # Tenta carregar o logo, se não der, não faz mal
-        try:
-            st.image("logo.png", width=60)
-        except:
-            st.write("🚀")
-    with col2:
-        st.title("Luso-IA (Modo Estável)")
+    st.title("Luso-IA: Painel de Controlo")
 
-    # --- DIAGNÓSTICO DA CHAVE ---
+    # 1. AUTENTICAÇÃO
     try:
         api_key = st.secrets["GOOGLE_API_KEY"]
-        # Esconde a chave, mostra só os ultimos 4 digitos para confirmar
-        st.caption(f"Chave carregada: ...{api_key[-4:]}") 
         genai.configure(api_key=api_key)
+        st.success("✅ Chave API conectada com sucesso.")
     except Exception as e:
-        st.error(f"❌ Erro ao ler a API Key dos Secrets: {e}")
+        st.error(f"❌ Erro na Chave API: {e}")
         st.stop()
 
-    with st.form("gerador"):
-        pais = st.selectbox("Mercado", ["Portugal (PT-PT)", "Brasil (PT-BR)", "Angola (PT-AO)"])
-        negocio = st.text_input("Negócio:", placeholder="Ex: Café")
-        tema = st.text_area("Tópico:", placeholder="Ex: Promoção")
-        btn = st.form_submit_button("Testar Gerador")
+    # 2. LISTAR MODELOS DISPONÍVEIS (O "Caça-Modelos")
+    st.info("🔄 A contactar a Google para ver modelos disponíveis...")
+    
+    try:
+        lista_modelos = []
+        for m in genai.list_models():
+            # Filtra apenas os que geram texto
+            if 'generateContent' in m.supported_generation_methods:
+                # Limpa o nome (tira o 'models/')
+                nome_limpo = m.name.replace('models/', '')
+                lista_modelos.append(nome_limpo)
+        
+        if not lista_modelos:
+            st.error("⚠️ A Google não devolveu nenhum modelo. A Chave API pode não ter permissões.")
+            st.stop()
+            
+    except Exception as e:
+        st.error(f"❌ Erro ao listar modelos: {e}")
+        st.stop()
 
-    if btn and negocio:
-        with st.spinner("A testar conexão à Google..."):
+    # 3. INTERFACE DE GERAÇÃO
+    with st.form("debug_form"):
+        st.write("### Teste de Geração")
+        
+        # AQUI ESTÁ A SOLUÇÃO: Tu escolhes o modelo da lista real!
+        modelo_escolhido = st.selectbox("Escolha o Modelo:", lista_modelos)
+        
+        tema = st.text_input("Tema para teste:", value="Diz Olá Mundo em Português")
+        btn = st.form_submit_button("Testar Agora")
+
+    if btn:
+        with st.spinner(f"A testar com {modelo_escolhido}..."):
             try:
-                # Vamos usar o modelo FLASH que é o mais rápido e gratuito
-                model = genai.GenerativeModel('gemini-1.5-flash')
+                model = genai.GenerativeModel(modelo_escolhido)
+                response = model.generate_content(tema)
                 
-                response = model.generate_content(f"Cria um post curto para {negocio} em {pais} sobre {tema}.")
-                
-                st.success("✅ SUCESSO! O sistema está a funcionar.")
-                st.markdown(response.text)
+                st.success("🎉 FUNCIONOU!")
+                st.markdown(f"**Resposta da IA:** {response.text}")
                 
             except Exception as e:
-                # AQUI ESTÁ O QUE PRECISAMOS VER
-                st.error("❌ Ocorreu um erro técnico:")
-                st.code(e) # Isto vai mostrar o erro exato
-                st.info("Copia a mensagem vermelha acima e envia para o suporte.")
+                st.error("❌ Erro na geração:")
+                st.code(e)
+
