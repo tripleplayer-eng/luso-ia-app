@@ -1,6 +1,5 @@
 import streamlit as st
 import google.generativeai as genai
-import re
 
 # --- CONFIGURAÇÃO VISUAL ---
 st.set_page_config(page_title="Luso-IA Global", page_icon="🌍", layout="centered")
@@ -29,35 +28,9 @@ def check_password():
     else:
         return True
 
-# --- MOTOR DE INOVAÇÃO (Bleeding Edge Detection) ---
-def get_absolute_latest_model():
-    """Descobre qual o modelo mais recente da Google em tempo real."""
-    try:
-        modelos_candidatos = []
-        for m in genai.list_models():
-            if 'generateContent' in m.supported_generation_methods:
-                name = m.name.replace('models/', '')
-                if 'gemini' in name:
-                    modelos_candidatos.append(name)
-        
-        # Algoritmo de pontuação
-        def pontuar_modelo(nome):
-            score = 0
-            if '2.0' in nome: score += 2000
-            elif '1.5' in nome: score += 1500
-            if 'pro' in nome: score += 100
-            elif 'flash' in nome: score += 50
-            if 'exp' in nome: score += 5000 
-            numeros = re.findall(r'\d+', nome)
-            if numeros:
-                score += sum(int(n) for n in numeros if len(n) > 2)
-            return score
-
-        modelos_candidatos.sort(key=pontuar_modelo, reverse=True)
-        # Retorna o melhor modelo encontrado
-        return modelos_candidatos[0] if modelos_candidatos else "gemini-1.5-flash"
-    except:
-        return "gemini-1.5-flash" # Fallback seguro
+# --- MOTOR DE IA ESTÁVEL ---
+# Fixamos o modelo 1.5 Pro para garantir que nunca dá erro de quota
+MODELO_ESTAVEL = "gemini-1.5-pro"
 
 # --- LÓGICA DE PREÇOS (PPP) ---
 def get_price_info(pais_selecionado):
@@ -92,15 +65,14 @@ if check_password():
     try:
         api_key = st.secrets["GOOGLE_API_KEY"]
         genai.configure(api_key=api_key)
-        modelo_state_of_art = get_absolute_latest_model()
     except:
         st.error("Erro Crítico: API Key não configurada.")
         st.stop()
 
-    # Badge do Motor
+    # Badge do Motor (Agora mostramos o Pro Estável)
     st.markdown(f"""
     <div style="background-color: #0f172a; color: #38bdf8; padding: 8px; border-radius: 8px; text-align: center; margin-bottom: 20px; font-size: 0.8rem; border: 1px solid #1e293b;">
-        🚀 A correr no motor de ponta: <code>{modelo_state_of_art}</code>
+        💎 Motor Profissional Ativo: <code>{MODELO_ESTAVEL}</code>
     </div>
     """, unsafe_allow_html=True)
 
@@ -135,7 +107,7 @@ if check_password():
             
             prompt = f"""
             Atua como Copywriter Especialista na Lusofonia. 
-            Estás a usar o modelo {modelo_state_of_art}.
+            Estás a usar o modelo {MODELO_ESTAVEL}.
             
             DADOS:
             - Mercado: {pais}
@@ -152,17 +124,18 @@ if check_password():
             """
             
             try:
-                model = genai.GenerativeModel(modelo_state_of_art)
+                # Usa explicitamente o modelo estável
+                model = genai.GenerativeModel(MODELO_ESTAVEL)
                 response = model.generate_content(prompt)
                 st.success("Gerado com sucesso!")
                 st.markdown(response.text)
             except Exception as e:
-                st.error(f"Erro no motor de IA ({e}). Tente novamente.")
+                st.error(f"Erro: {e}")
+                st.info("Dica: Se o erro persistir, aguarde 1 minuto (limite de velocidade da Google).")
 
     # --- ÁREA DE PREÇO DINÂMICA ---
     st.markdown("---")
     
-    # Busca o preço certo
     preco_certo, info_extra = get_price_info(pais)
     
     st.markdown(f"""
@@ -183,5 +156,6 @@ if check_password():
         </a>
     </div>
     """, unsafe_allow_html=True)
+
 
 
