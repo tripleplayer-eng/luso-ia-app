@@ -202,6 +202,7 @@ if check_password():
     
     st.markdown(f"""
     <div style="text-align: center; margin-top: 10px;">
-        <a href="https://tally.so/r/w7e8a" target="_blank" style="color: #2563eb; text-decoration: none; font-weight: bold;">Gerir Subscrição ➔</a>
+        <a href="https://tally.so/r/81qLVx" target="_blank" style="color: #2563eb; text-decoration: none; font-weight: bold;">Gerir Subscrição ➔</a>
     </div>
     """, unsafe_allow_html=True)
+
