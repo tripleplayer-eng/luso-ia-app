@@ -17,7 +17,7 @@ def check_password():
             st.session_state.password_correct = False
 
     if not st.session_state.password_correct:
-        # Tenta mostrar o logo no ecrã de login
+        # Tenta mostrar o logo
         try:
             st.image("logo.png", width=80)
         except:
@@ -28,9 +28,9 @@ def check_password():
     else:
         return True
 
-# --- MOTOR DE IA ESTÁVEL ---
-# Fixamos o modelo 1.5 Pro para garantir que nunca dá erro de quota
-MODELO_ESTAVEL = "gemini-1.5-pro"
+# --- MOTOR DE IA BLINDADO ---
+# Mudámos para o FLASH. É o mais rápido e estável da Google atualmente.
+MODELO_ESTAVEL = "gemini-1.5-flash"
 
 # --- LÓGICA DE PREÇOS (PPP) ---
 def get_price_info(pais_selecionado):
@@ -50,7 +50,7 @@ def get_price_info(pais_selecionado):
         return "~14€ (Equivalente)", "Preço Global South"
 
 if check_password():
-    # --- CABEÇALHO COM LOGÓTIPO ---
+    # --- CABEÇALHO ---
     col_logo, col_text = st.columns([1, 4])
     with col_logo:
         try:
@@ -69,10 +69,10 @@ if check_password():
         st.error("Erro Crítico: API Key não configurada.")
         st.stop()
 
-    # Badge do Motor (Agora mostramos o Pro Estável)
+    # Badge do Motor
     st.markdown(f"""
     <div style="background-color: #0f172a; color: #38bdf8; padding: 8px; border-radius: 8px; text-align: center; margin-bottom: 20px; font-size: 0.8rem; border: 1px solid #1e293b;">
-        💎 Motor Profissional Ativo: <code>{MODELO_ESTAVEL}</code>
+        ⚡ Motor Rápido Ativo: <code>{MODELO_ESTAVEL}</code>
     </div>
     """, unsafe_allow_html=True)
 
@@ -124,16 +124,14 @@ if check_password():
             """
             
             try:
-                # Usa explicitamente o modelo estável
                 model = genai.GenerativeModel(MODELO_ESTAVEL)
                 response = model.generate_content(prompt)
                 st.success("Gerado com sucesso!")
                 st.markdown(response.text)
             except Exception as e:
                 st.error(f"Erro: {e}")
-                st.info("Dica: Se o erro persistir, aguarde 1 minuto (limite de velocidade da Google).")
 
-    # --- ÁREA DE PREÇO DINÂMICA ---
+    # --- ÁREA DE VENDA ---
     st.markdown("---")
     
     preco_certo, info_extra = get_price_info(pais)
@@ -156,6 +154,7 @@ if check_password():
         </a>
     </div>
     """, unsafe_allow_html=True)
+
 
 
 
