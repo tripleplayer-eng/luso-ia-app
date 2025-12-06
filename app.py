@@ -1,78 +1,187 @@
 import streamlit as st
 import google.generativeai as genai
-import os
+import re
 
-# CONFIGURAÇÃO
-st.set_page_config(page_title="Luso-IA System", page_icon="⚙️")
+# --- CONFIGURAÇÃO VISUAL ---
+st.set_page_config(page_title="Luso-IA Global", page_icon="🌍", layout="centered")
 
-# --- SEGURANÇA ---
+# --- SEGURANÇA (Senha: LUSOIA2025) ---
 def check_password():
     if "password_correct" not in st.session_state:
         st.session_state.password_correct = False
+
     def password_entered():
         if st.session_state["password"] == "LUSOIA2025":
             st.session_state.password_correct = True
             del st.session_state["password"]
         else:
             st.session_state.password_correct = False
+
     if not st.session_state.password_correct:
+        # Tenta mostrar o logo no ecrã de login
+        try:
+            st.image("logo.png", width=80)
+        except:
+            pass
+        st.markdown("### 🔒 Acesso Restrito: Luso-IA")
         st.text_input("Senha de Acesso:", type="password", on_change=password_entered, key="password")
         return False
     else:
         return True
 
-if check_password():
-    st.title("Luso-IA: Painel de Controlo")
+# --- MOTOR DE INOVAÇÃO (Bleeding Edge Detection) ---
+def get_absolute_latest_model():
+    """Descobre qual o modelo mais recente da Google em tempo real."""
+    try:
+        modelos_candidatos = []
+        for m in genai.list_models():
+            if 'generateContent' in m.supported_generation_methods:
+                name = m.name.replace('models/', '')
+                if 'gemini' in name:
+                    modelos_candidatos.append(name)
+        
+        # Algoritmo de pontuação
+        def pontuar_modelo(nome):
+            score = 0
+            if '2.0' in nome: score += 2000
+            elif '1.5' in nome: score += 1500
+            if 'pro' in nome: score += 100
+            elif 'flash' in nome: score += 50
+            if 'exp' in nome: score += 5000 
+            numeros = re.findall(r'\d+', nome)
+            if numeros:
+                score += sum(int(n) for n in numeros if len(n) > 2)
+            return score
 
-    # 1. AUTENTICAÇÃO
+        modelos_candidatos.sort(key=pontuar_modelo, reverse=True)
+        # Retorna o melhor modelo encontrado
+        return modelos_candidatos[0] if modelos_candidatos else "gemini-1.5-flash"
+    except:
+        return "gemini-1.5-flash" # Fallback seguro
+
+# --- LÓGICA DE PREÇOS (PPP) ---
+def get_price_info(pais_selecionado):
+    if "Portugal" in pais_selecionado:
+        return "29€", "Faturação Europeia"
+    elif "Brasil" in pais_selecionado:
+        return "R$ 97", "Preço especial Brasil"
+    elif "Angola" in pais_selecionado:
+        return "15.000 AOA", "Ajustado (Kwanza)"
+    elif "Moçambique" in pais_selecionado:
+        return "1.100 MZN", "Ajustado (Metical)"
+    elif "Cabo Verde" in pais_selecionado:
+        return "1.500 CVE", "Ajustado (Escudo)"
+    elif "São Tomé" in pais_selecionado:
+        return "350 STN", "Ajustado (Dobra)"
+    else:
+        return "~14€ (Equivalente)", "Preço Global South"
+
+if check_password():
+    # --- CABEÇALHO COM LOGÓTIPO ---
+    col_logo, col_text = st.columns([1, 4])
+    with col_logo:
+        try:
+            st.image("logo.png", use_container_width=True)
+        except:
+            st.write("🌍")
+    with col_text:
+        st.title("Luso-IA Global")
+        st.caption("A Inteligência Artificial da Lusofonia")
+    
+    # Configuração API
     try:
         api_key = st.secrets["GOOGLE_API_KEY"]
         genai.configure(api_key=api_key)
-        st.success("✅ Chave API conectada com sucesso.")
-    except Exception as e:
-        st.error(f"❌ Erro na Chave API: {e}")
+        modelo_state_of_art = get_absolute_latest_model()
+    except:
+        st.error("Erro Crítico: API Key não configurada.")
         st.stop()
 
-    # 2. LISTAR MODELOS DISPONÍVEIS (O "Caça-Modelos")
-    st.info("🔄 A contactar a Google para ver modelos disponíveis...")
-    
-    try:
-        lista_modelos = []
-        for m in genai.list_models():
-            # Filtra apenas os que geram texto
-            if 'generateContent' in m.supported_generation_methods:
-                # Limpa o nome (tira o 'models/')
-                nome_limpo = m.name.replace('models/', '')
-                lista_modelos.append(nome_limpo)
-        
-        if not lista_modelos:
-            st.error("⚠️ A Google não devolveu nenhum modelo. A Chave API pode não ter permissões.")
-            st.stop()
+    # Badge do Motor
+    st.markdown(f"""
+    <div style="background-color: #0f172a; color: #38bdf8; padding: 8px; border-radius: 8px; text-align: center; margin-bottom: 20px; font-size: 0.8rem; border: 1px solid #1e293b;">
+        🚀 A correr no motor de ponta: <code>{modelo_state_of_art}</code>
+    </div>
+    """, unsafe_allow_html=True)
+
+    # Formulário
+    with st.form("gerador"):
+        col1, col2 = st.columns(2)
+        with col1:
+            pais = st.selectbox(
+                "Onde está o seu negócio?", 
+                [
+                    "Portugal (PT-PT)", 
+                    "Brasil (PT-BR)", 
+                    "Angola (PT-AO)", 
+                    "Moçambique (PT-MZ)", 
+                    "Cabo Verde (PT-CV)",
+                    "Guiné-Bissau (PT-GW)",
+                    "São Tomé e Príncipe (PT-ST)",
+                    "Timor-Leste (PT-TL)"
+                ]
+            )
+        with col2:
+            tom = st.selectbox("Estilo", ["Inovador", "Profissional", "Viral", "Storytelling", "Institucional"])
             
-    except Exception as e:
-        st.error(f"❌ Erro ao listar modelos: {e}")
-        st.stop()
-
-    # 3. INTERFACE DE GERAÇÃO
-    with st.form("debug_form"):
-        st.write("### Teste de Geração")
+        negocio = st.text_input("Negócio:", placeholder="Ex: Café Central em Luanda")
+        tema = st.text_area("Tópico:", placeholder="Ex: Promoção de pequeno-almoço")
         
-        # AQUI ESTÁ A SOLUÇÃO: Tu escolhes o modelo da lista real!
-        modelo_escolhido = st.selectbox("Escolha o Modelo:", lista_modelos)
-        
-        tema = st.text_input("Tema para teste:", value="Diz Olá Mundo em Português")
-        btn = st.form_submit_button("Testar Agora")
+        btn = st.form_submit_button("🌍 Gerar Conteúdo Localizado")
 
-    if btn:
-        with st.spinner(f"A testar com {modelo_escolhido}..."):
+    # Geração
+    if btn and negocio and tema:
+        with st.spinner(f"A criar conteúdo com sotaque de {pais}..."):
+            
+            prompt = f"""
+            Atua como Copywriter Especialista na Lusofonia. 
+            Estás a usar o modelo {modelo_state_of_art}.
+            
+            DADOS:
+            - Mercado: {pais}
+            - Negócio: {negocio}
+            - Tom: {tom}
+            - Tópico: {tema}
+            
+            REGRAS DE OURO: 
+            1. Usa a moeda correta do país selecionado se falares de preços.
+            2. Usa a gramática correta (PT-BR para Brasil, PT-PT Base para o resto).
+            3. Usa referências culturais locais se possível.
+            
+            SAÍDA: Post Instagram completo (Texto + Imagem + Hashtags).
+            """
+            
             try:
-                model = genai.GenerativeModel(modelo_escolhido)
-                response = model.generate_content(tema)
-                
-                st.success("🎉 FUNCIONOU!")
-                st.markdown(f"**Resposta da IA:** {response.text}")
-                
+                model = genai.GenerativeModel(modelo_state_of_art)
+                response = model.generate_content(prompt)
+                st.success("Gerado com sucesso!")
+                st.markdown(response.text)
             except Exception as e:
-                st.error("❌ Erro na geração:")
-                st.code(e)
+                st.error(f"Erro no motor de IA ({e}). Tente novamente.")
+
+    # --- ÁREA DE PREÇO DINÂMICA ---
+    st.markdown("---")
+    
+    # Busca o preço certo
+    preco_certo, info_extra = get_price_info(pais)
+    
+    st.markdown(f"""
+    <div style="text-align: center; background-color: #f0f9ff; padding: 25px; border-radius: 12px; border: 1px solid #bae6fd;">
+        <h3 style="color: #0c4a6e; margin:0; font-size: 1.2rem;">Gostou do resultado?</h3>
+        <p style="color: #0369a1; font-size: 0.9rem; margin-bottom: 15px;">Esta é uma demonstração gratuita.</p>
+        
+        <div style="margin: 20px 0;">
+            <p style="margin:0; font-size: 0.8rem; color: #64748b; text-transform: uppercase; font-weight:bold;">Preço para {pais.split('(')[0]}</p>
+            <span style="font-size: 2rem; font-weight: 800; color: #0284c7;">{preco_certo}</span>
+            <span style="font-size: 0.9rem; color: #64748b;">/mês</span>
+            <p style="font-size: 0.8rem; color: #64748b;">({info_extra})</p>
+        </div>
+        
+        <a href="https://www.luso-ia.com" target="_blank" 
+           style="display: inline-block; background-color: #0284c7; color: white; padding: 14px 30px; text-decoration: none; border-radius: 8px; font-weight: bold; margin-top: 10px; transition: 0.3s;">
+           Garantir Oferta Local ➔
+        </a>
+    </div>
+    """, unsafe_allow_html=True)
+
 
