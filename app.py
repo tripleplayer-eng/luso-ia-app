@@ -101,7 +101,7 @@ if check_login():
         <div style="background-color: #fee2e2; padding: 20px; border-radius: 10px; border: 1px solid #ef4444; text-align: center;">
             <h3 style="color: #991b1b;">Gostou da experiência?</h3>
             <p style="color: #7f1d1d;">Já usou os seus 3 créditos gratuitos. Para continuar a criar conteúdo ilimitado, ative a sua licença.</p>
-            <a href="https://tally.so/r/w7e8a" target="_blank" 
+            <a href="https://tally.so/r/81qLVx" target="_blank" 
                style="display: inline-block; background-color: #dc2626; color: white; padding: 12px 25px; text-decoration: none; border-radius: 8px; font-weight: bold; margin-top: 10px;">
                🚀 Ativar Luso-IA Pro Agora
             </a>
@@ -173,3 +173,4 @@ if check_login():
     preco, info = get_price_info(pais)
     st.markdown(f"<div style='text-align: center; color: gray;'>Licença: {pais.split('(')[0]} • {preco}</div>", unsafe_allow_html=True)
     st.markdown(f"<div style='text-align: center; margin-top: 10px;'><a href='https://tally.so/r/w7e8a' target='_blank' style='color: #2563eb; text-decoration: none; font-weight: bold;'>Subscrever Agora ➔</a></div>", unsafe_allow_html=True)
+
