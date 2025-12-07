@@ -3,6 +3,8 @@ import google.generativeai as genai
 import pandas as pd
 from streamlit_image_select import image_select
 import time
+import random          # NOVO: Para imagens sempre diferentes
+import urllib.parse    # NOVO: Para corrigir os acentos no link da imagem
 
 # --- CONFIGURAÇÃO ---
 st.set_page_config(page_title="Luso-IA App", page_icon="🇵🇹", layout="centered")
@@ -42,7 +44,6 @@ def check_login():
     except: pass
     st.markdown("### 🔒 Login Luso-IA")
     
-    # Apenas 2 Abas: Entrar ou Testar
     tab1, tab2 = st.tabs(["🔑 Entrar (Pro)", "🎁 Testar (Grátis)"])
     
     with tab1:
@@ -132,7 +133,7 @@ if check_login():
     )
 
     st.markdown("---")
-    with st.form("gerador_principal"): # Nome único para evitar erro de duplicado
+    with st.form("gerador_principal"):
         col_a, col_b = st.columns(2)
         with col_a:
             pais = st.selectbox("País Alvo", ["🇵🇹 Portugal (PT-PT)", "🇧🇷 Brasil (PT-BR)", "🇦🇴 Angola (PT-AO)", "🇲🇿 Moçambique (PT-MZ)", "🇨🇻 Cabo Verde (PT-CV)", "🇬🇼 Guiné-Bissau (PT-GW)", "🇸🇹 São Tomé e Príncipe (PT-ST)", "🇹🇱 Timor-Leste (PT-TL)"])
@@ -166,19 +167,25 @@ if check_login():
             except Exception as e:
                 st.error(f"Erro Texto: {e}")
 
-        # 2. IMAGEM IA
-        with st.spinner("🎨 A criar imagem..."):
+        # 2. IMAGEM IA (CORRIGIDA E SEGURA)
+        with st.spinner("🎨 A pintar a imagem com IA..."):
             try:
-                # Prompt de imagem otimizado
-                image_prompt = f"Professional photography of {tema} for {negocio}, {pais} context, high quality, {tom} style, 4k"
-                image_prompt = image_prompt.replace(" ", "%20")
-                image_url = f"https://image.pollinations.ai/prompt/{image_prompt}?width=800&height=800&nologo=true&seed={len(negocio)}"
+                # Cria um prompt seguro e limpo
+                seed = random.randint(0, 100000) # Número aleatório para garantir imagem nova
+                
+                # Tradução e limpeza para URL (Encoding)
+                base_prompt = f"Professional photography of {tema} for {negocio}, {pais} style, highly detailed, 4k, photorealistic"
+                clean_prompt = urllib.parse.quote(base_prompt) # Isto resolve os acentos e espaços!
+                
+                # URL Mágico da Pollinations
+                image_url = f"https://image.pollinations.ai/prompt/{clean_prompt}?width=1024&height=1024&nologo=true&seed={seed}&model=flux"
                 
                 st.markdown("### 📸 Imagem Gerada pela Luso-IA")
-                st.image(image_url)
-                st.caption("Botão direito > Guardar imagem como...")
-            except:
-                st.warning("Não foi possível gerar a imagem.")
+                st.image(image_url, caption=f"Imagem única gerada para: {negocio}")
+                st.caption("Botão direito na imagem > Guardar como...")
+                
+            except Exception as e:
+                st.warning(f"Erro na imagem: {e}")
 
     st.markdown("---")
     p, i = get_price_info(pais)
