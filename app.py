@@ -1,123 +1,135 @@
 import streamlit as st
 import google.generativeai as genai
+import pandas as pd
 from streamlit_image_select import image_select
+import time
 
 # --- CONFIGURAÇÃO ---
 st.set_page_config(page_title="Luso-IA App", page_icon="🇵🇹", layout="centered")
 
-# --- CSS VISUAL ---
+# --- CSS ---
 st.markdown("""
 <style>
-    iframe { display: block; margin: 0 auto; }
-    h1 { text-align: center; }
-    .stButton button { 
-        width: 100%; border-radius: 12px; font-weight: bold; 
-        background: linear-gradient(to right, #2563eb, #4f46e5); 
-        color: white; padding: 0.7rem 1rem; border: none;
-        box-shadow: 0 4px 10px rgba(37, 99, 235, 0.2); transition: all 0.3s ease;
-    }
+    .stButton button { width: 100%; border-radius: 12px; font-weight: bold; background: linear-gradient(to right, #2563eb, #4f46e5); color: white; padding: 0.7rem 1rem; border: none; box-shadow: 0 4px 10px rgba(37, 99, 235, 0.2); }
     .stButton button:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(37, 99, 235, 0.4); }
-    .caption-text { text-align: center; color: #64748b; font-size: 1.1rem; margin-bottom: 20px; }
 </style>
 """, unsafe_allow_html=True)
 
-# --- GESTÃO DE ESTADO (CONTADOR DEMO) ---
-if "demo_count" not in st.session_state:
-    st.session_state.demo_count = 0
+# --- CONEXÃO À BASE DE DADOS (GOOGLE SHEETS) ---
+# ⚠️ COLA AQUI O TEU LINK DO CSV (Publicado na Web) ⚠️
+LINK_DA_BASE_DE_DADOS = "https://docs.google.com/spreadsheets/d/e/2PACX-1vT_xyKHdsk9og2mRKE5uZBKcANNFtvx8wuUhR3a7gV-TFlZeSuU2wzJB_SjfkUKKIqVhh3LcaRr8Wn3/pub?gid=0&single=true&output=csv"
 
-# --- SEGURANÇA INTELIGENTE ---
+@st.cache_data(ttl=10) # Limpa a cache a cada 10 segundos para testares rápido
+def carregar_clientes():
+    try:
+        # Lê o CSV
+        df = pd.read_csv(LINK_DA_BASE_DE_DADOS)
+        
+        # LIMPEZA DE DADOS (CRÍTICO PARA FUNCIONAR)
+        # Remove espaços em branco antes e depois dos textos
+        df.columns = df.columns.str.strip() # Limpa cabeçalhos
+        df['Email'] = df['Email'].astype(str).str.strip()
+        df['Senha'] = df['Senha'].astype(str).str.strip()
+        
+        # Cria um dicionário {email: senha}
+        return dict(zip(df.Email, df.Senha))
+    except Exception as e:
+        return {"erro": str(e)}
+
+# --- SISTEMA DE LOGIN ---
 def check_login():
     if "user_type" not in st.session_state:
         st.session_state.user_type = None
 
-    # Se já estiver logado, passa
     if st.session_state.user_type:
         return True
 
-    # Ecrã de Login
     try: st.image("logo.png", width=80) 
     except: pass
     st.markdown("### 🔒 Login Luso-IA")
     
-    senha_input = st.text_input("Senha de Acesso:", type="password")
+    tab1, tab2, tab3 = st.tabs(["🔑 Entrar (Pro)", "🎁 Testar (Grátis)", "🛠️ Admin"])
     
-    if senha_input:
-        if senha_input == "LUSOIA2025": # SENHA PAGA (ILIMITADA)
-            st.session_state.user_type = "PRO"
-            st.rerun()
-        elif senha_input == "TRY-LUSO": # SENHA DEMO (LIMITADA)
+    # LOGIN PRO (COM DIAGNÓSTICO)
+    with tab1:
+        with st.form("login_pro"):
+            email_input = st.text_input("O seu Email:").strip() # Remove espaços logo na entrada
+            senha_input = st.text_input("A sua Senha:", type="password").strip()
+            btn_pro = st.form_submit_button("Entrar")
+            
+            if btn_pro:
+                clientes = carregar_clientes()
+                
+                # Verifica erro na leitura do Excel
+                if "erro" in clientes:
+                    st.error("Erro a ler base de dados. Verifique o link CSV no código.")
+                
+                # Validação
+                elif email_input in clientes and clientes[email_input] == senha_input:
+                    st.session_state.user_type = "PRO"
+                    st.session_state.user_email = email_input
+                    st.success("Login com sucesso!")
+                    st.rerun()
+                else:
+                    st.error("Dados incorretos. Verifique o email e a senha.")
+                    st.caption("Dica: A senha deve ser igual à que recebeu no email (Ex: LUSO-1234)")
+
+    # DEMO
+    with tab2:
+        st.info("Tem direito a 3 gerações gratuitas.")
+        if st.button("Começar Demo"):
             st.session_state.user_type = "DEMO"
             st.rerun()
-        else:
-            st.error("Senha incorreta.")
-    
-    # Dica para novos utilizadores
-    st.info("💡 Novo aqui? Use a senha **TRY-LUSO** para testar grátis (3 créditos).")
+
+    # ABA DE DIAGNÓSTICO (SÓ PARA TI - ELIMINAR DEPOIS SE QUISERES)
+    with tab3:
+        st.caption("Área secreta para verificar se o Excel está a funcionar.")
+        if st.button("Ver Base de Dados (Debug)"):
+            dados = carregar_clientes()
+            st.write(dados)
+            st.caption("Se vires os emails aqui, a conexão está a funcionar.")
+
     return False
 
-# --- MOTOR ---
+# --- MOTOR IA ---
 def get_working_model():
     try:
         lista = [m.name.replace('models/', '') for m in genai.list_models() if 'generateContent' in m.supported_generation_methods]
         preferidos = ["gemini-1.5-flash", "gemini-1.5-pro", "gemini-pro"]
-        for modelo in preferidos:
-            if modelo in lista: return modelo
+        for m in preferidos:
+            if m in lista: return m
         return lista[0] if lista else "gemini-pro"
     except: return "gemini-pro"
 
-def get_price_info(pais):
-    if "Portugal" in pais: return "19,90€", "Promoção Europa"
-    if "Brasil" in pais: return "R$ 59,90", "Preço Brasil"
-    if "Angola" in pais: return "12.000 Kz", "Preço Ajustado"
-    if "Moçambique" in pais: return "590 MT", "Preço Ajustado"
-    if "Cabo Verde" in pais: return "1.290$00", "Preço Ajustado"
-    if "Guiné" in pais: return "6.500 XOF", "Preço Ajustado"
-    if "São Tomé" in pais: return "350 STN", "Preço Ajustado"
-    return "$12.00", "Internacional"
-
 # --- APP ---
 if check_login():
-    # BARRA SUPERIOR (STATUS)
     col1, col2 = st.columns([1, 4])
     with col1:
         try: st.image("logo.png", use_container_width=True)
         except: st.write("🌍")
     with col2:
         st.title("Luso-IA Global")
-        if st.session_state.user_type == "DEMO":
-            restantes = 3 - st.session_state.demo_count
-            st.warning(f"💎 Modo Demonstração: Tem **{restantes}** gerações restantes.")
+        if st.session_state.user_type == "PRO":
+            st.success(f"✅ Conta PRO: {st.session_state.user_email}")
         else:
-            st.success("💎 Modo PRO: Acesso Ilimitado")
+            if "demo_count" not in st.session_state: st.session_state.demo_count = 0
+            restantes = 3 - st.session_state.demo_count
+            st.warning(f"⚠️ Demo: {restantes} créditos")
 
-    # VERIFICAÇÃO DE LIMITE
-    bloqueado = False
     if st.session_state.user_type == "DEMO" and st.session_state.demo_count >= 3:
-        bloqueado = True
+        st.error("🚫 A sua demonstração terminou!")
+        st.markdown("<a href='https://tally.so/r/81qLVx' target='_blank' style='background:#dc2626;color:white;padding:10px 20px;border-radius:8px;text-decoration:none;font-weight:bold;'>Subscrever Agora</a>", unsafe_allow_html=True)
+        st.stop()
 
-    if bloqueado:
-        st.error("🚫 Limite de demonstração atingido!")
-        st.markdown("""
-        <div style="background-color: #fee2e2; padding: 20px; border-radius: 10px; border: 1px solid #ef4444; text-align: center;">
-            <h3 style="color: #991b1b;">Gostou da experiência?</h3>
-            <p style="color: #7f1d1d;">Já usou os seus 3 créditos gratuitos. Para continuar a criar conteúdo ilimitado, ative a sua licença.</p>
-            <a href="https://tally.so/r/81qLVx" target="_blank" 
-               style="display: inline-block; background-color: #dc2626; color: white; padding: 12px 25px; text-decoration: none; border-radius: 8px; font-weight: bold; margin-top: 10px;">
-               🚀 Ativar Luso-IA Pro Agora
-            </a>
-        </div>
-        """, unsafe_allow_html=True)
-        st.stop() # Pára o código aqui, não mostra o resto
-
-    # SE NÃO ESTIVER BLOQUEADO, MOSTRA A APP NORMAL:
     try:
         api_key = st.secrets["GOOGLE_API_KEY"]
         genai.configure(api_key=api_key)
         modelo_ativo = get_working_model()
     except:
-        st.error("Erro Crítico: API Key em falta.")
+        st.error("Erro API Key.")
         st.stop()
 
+    # SELETOR DE REDE
     st.write("### 1. Onde vai publicar?")
     rede_selecionada = image_select(
         label="",
@@ -133,44 +145,48 @@ if check_login():
 
     st.markdown("---")
     with st.form("gerador"):
-        st.write("### 2. Detalhes")
         col_a, col_b = st.columns(2)
         with col_a:
-            pais = st.selectbox("País Alvo", ["🇵🇹 Portugal (PT-PT)", "🇧🇷 Brasil (PT-BR)", "🇦🇴 Angola (PT-AO)", "🇲🇿 Moçambique (PT-MZ)", "🇨🇻 Cabo Verde (PT-CV)", "🇬🇼 Guiné-Bissau (PT-GW)", "🇸🇹 São Tomé e Príncipe (PT-ST)", "🇹🇱 Timor-Leste (PT-TL)"])
+            pais = st.selectbox("País Alvo", ["🇵🇹 Portugal", "🇧🇷 Brasil", "🇦🇴 Angola", "🇲🇿 Moçambique", "🇨🇻 Cabo Verde", "🇬🇼 Guiné-Bissau", "🇸🇹 São Tomé", "🇹🇱 Timor-Leste"])
         with col_b:
-            tom = st.selectbox("Tom", ["Profissional", "Divertido", "Vendas/Promoção", "Storytelling", "Institucional"])
-        negocio = st.text_input("O seu Negócio:", placeholder="Ex: Clínica Dentária...")
-        tema = st.text_area("Tópico:", placeholder="Ex: Promoção de Natal...")
-        btn = st.form_submit_button("✨ Gerar Conteúdo Mágico", type="primary")
+            tom = st.selectbox("Tom", ["Profissional", "Divertido", "Vendas", "Storytelling"])
+        negocio = st.text_input("O seu Negócio:")
+        tema = st.text_area("Tópico:")
+        btn = st.form_submit_button("✨ Gerar Texto + Imagem IA")
 
     if btn and negocio:
-        # Incrementa contador se for DEMO
-        if st.session_state.user_type == "DEMO":
-            st.session_state.demo_count += 1
-            
-        rede_nome = "Rede Social" # (Lógica simplificada para poupar espaço, funciona igual)
-        if "2111463" in rede_selecionada: rede_nome = "Instagram"
-        elif "174857" in rede_selecionada: rede_nome = "LinkedIn"
-        # ... (A IA assume a rede certa na mesma)
+        if st.session_state.user_type == "DEMO": st.session_state.demo_count += 1
+        
+        rede_nome = "Instagram"
+        if "174857" in rede_selecionada: rede_nome = "LinkedIn"
+        elif "733585" in rede_selecionada: rede_nome = "WhatsApp"
 
-        with st.spinner(f"A criar..."):
-            prompt = f"Atua como Copywriter Sénior. País: {pais}. Negócio: {negocio}. Rede: {rede_nome}. Tom: {tom}. Tópico: {tema}. Cria o conteúdo."
+        # 1. GERAÇÃO DE TEXTO
+        with st.spinner("✍️ A escrever o copy..."):
+            prompt = f"Atua como Copywriter. País: {pais}. Rede: {rede_nome}. Tom: {tom}. Negócio: {negocio}. Tópico: {tema}. Cria texto estruturado."
             try:
                 model = genai.GenerativeModel(modelo_ativo)
                 response = model.generate_content(prompt)
-                st.success("Conteúdo Gerado!")
+                st.success("Texto Gerado!")
                 st.markdown(response.text)
-                
-                # Se for demo, avisa quanto falta
-                if st.session_state.user_type == "DEMO":
-                    usados = st.session_state.demo_count
-                    st.caption(f"⚠️ Atenção: Usou {usados} de 3 créditos gratuitos.")
-                    
             except Exception as e:
-                st.error(f"Erro: {e}")
+                st.error(f"Erro Texto: {e}")
 
-    st.markdown("---")
-    preco, info = get_price_info(pais)
-    st.markdown(f"<div style='text-align: center; color: gray;'>Licença: {pais.split('(')[0]} • {preco}</div>", unsafe_allow_html=True)
-    st.markdown(f"<div style='text-align: center; margin-top: 10px;'><a href='https://tally.so/r/w7e8a' target='_blank' style='color: #2563eb; text-decoration: none; font-weight: bold;'>Subscrever Agora ➔</a></div>", unsafe_allow_html=True)
+        # 2. GERAÇÃO DE IMAGEM (POLLINATIONS AI)
+        with st.spinner("🎨 A pintar a imagem com IA..."):
+            try:
+                # Criamos um prompt de imagem simples em inglês para funcionar melhor
+                image_prompt = f"Professional photography of {tema} for {negocio}, high quality, {tom} style, 4k"
+                image_prompt = image_prompt.replace(" ", "%20") # Formata para URL
+                
+                # URL Mágico da Pollinations
+                image_url = f"https://image.pollinations.ai/prompt/{image_prompt}?width=800&height=800&nologo=true"
+                
+                st.markdown("### 📸 Imagem Sugerida (IA)")
+                st.image(image_url, caption="Imagem gerada por IA única para si.")
+                st.info("Pode guardar esta imagem (Botão direito > Guardar como).")
+                
+            except Exception as e:
+                st.warning("Não foi possível gerar a imagem neste momento.")
+
 
