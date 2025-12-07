@@ -3,8 +3,8 @@ import google.generativeai as genai
 import pandas as pd
 from streamlit_image_select import image_select
 import time
-import random          # NOVO: Para imagens sempre diferentes
-import urllib.parse    # NOVO: Para corrigir os acentos no link da imagem
+import random
+import urllib.parse
 
 # --- CONFIGURAÇÃO ---
 st.set_page_config(page_title="Luso-IA App", page_icon="🇵🇹", layout="centered")
@@ -17,18 +17,23 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# --- CONEXÃO À BASE DE DADOS (GOOGLE SHEETS) ---
-# ⚠️ COLA AQUI O TEU LINK DO CSV ⚠️
+# --- CONEXÃO À BASE DE DADOS (JÁ INSERIDA) ---
 LINK_DA_BASE_DE_DADOS = "https://docs.google.com/spreadsheets/d/e/2PACX-1vT_xyKHdsk9og2mRKE5uZBKcANNFtvx8wuUhR3a7gV-TFlZeSuU2wzJB_SjfkUKKIqVhh3LcaRr8Wn3/pub?gid=0&single=true&output=csv"
+
+# --- LINK DO TALLY (JÁ INSERIDO) ---
+LINK_TALLY = "https://tally.so/r/81qLVx"
 
 @st.cache_data(ttl=60)
 def carregar_clientes():
     try:
         df = pd.read_csv(LINK_DA_BASE_DE_DADOS)
         df.columns = df.columns.str.strip()
-        df['Email'] = df['Email'].astype(str).str.strip()
-        df['Senha'] = df['Senha'].astype(str).str.strip()
-        return dict(zip(df.Email, df.Senha))
+        # Garante que as colunas existem antes de tentar ler
+        if 'Email' in df.columns and 'Senha' in df.columns:
+            df['Email'] = df['Email'].astype(str).str.strip()
+            df['Senha'] = df['Senha'].astype(str).str.strip()
+            return dict(zip(df.Email, df.Senha))
+        return {}
     except:
         return {}
 
@@ -61,7 +66,7 @@ def check_login():
                     time.sleep(0.5)
                     st.rerun()
                 else:
-                    st.error("Dados incorretos.")
+                    st.error("Dados incorretos ou subscrição inativa.")
 
     with tab2:
         st.info("Tem direito a 3 gerações gratuitas.")
@@ -108,7 +113,7 @@ if check_login():
 
     if st.session_state.user_type == "DEMO" and st.session_state.demo_count >= 3:
         st.error("🚫 A sua demonstração terminou!")
-        st.markdown("<a href='https://tally.so/r/81qLVx' target='_blank' style='background:#dc2626;color:white;padding:10px 20px;border-radius:8px;text-decoration:none;font-weight:bold;'>Subscrever Agora</a>", unsafe_allow_html=True)
+        st.markdown(f"<a href='{LINK_TALLY}' target='_blank' style='background:#dc2626;color:white;padding:10px 20px;border-radius:8px;text-decoration:none;font-weight:bold;'>Subscrever Agora</a>", unsafe_allow_html=True)
         st.stop()
 
     try:
@@ -167,26 +172,30 @@ if check_login():
             except Exception as e:
                 st.error(f"Erro Texto: {e}")
 
-        # 2. IMAGEM IA (CORRIGIDA E SEGURA)
-        with st.spinner("🎨 A pintar a imagem com IA..."):
+        # 2. IMAGEM IA (CORRIGIDA)
+        with st.spinner("🎨 A criar imagem..."):
             try:
-                # Cria um prompt seguro e limpo
-                seed = random.randint(0, 100000) # Número aleatório para garantir imagem nova
+                # Construção do Prompt Seguro
+                # Convertemos tudo para string limpa
+                prompt_base = f"Professional photography of {tema} for business {negocio}, {pais} style, realistic, 8k"
                 
-                # Tradução e limpeza para URL (Encoding)
-                base_prompt = f"Professional photography of {tema} for {negocio}, {pais} style, highly detailed, 4k, photorealistic"
-                clean_prompt = urllib.parse.quote(base_prompt) # Isto resolve os acentos e espaços!
+                # Codificação para URL (Resolve o problema dos acentos e espaços)
+                prompt_encoded = urllib.parse.quote(prompt_base)
                 
-                # URL Mágico da Pollinations
-                image_url = f"https://image.pollinations.ai/prompt/{clean_prompt}?width=1024&height=1024&nologo=true&seed={seed}&model=flux"
+                # Random Seed para variar a imagem
+                seed = random.randint(1, 99999)
+                
+                # URL Final Pollinations (Modelo FLUX)
+                image_url = f"https://image.pollinations.ai/prompt/{prompt_encoded}?width=1024&height=1024&nologo=true&seed={seed}&model=flux"
                 
                 st.markdown("### 📸 Imagem Gerada pela Luso-IA")
-                st.image(image_url, caption=f"Imagem única gerada para: {negocio}")
-                st.caption("Botão direito na imagem > Guardar como...")
+                st.image(image_url, caption=f"Imagem exclusiva para {negocio}", use_container_width=True)
+                st.caption("Dica: Clique com o botão direito na imagem e escolha 'Guardar imagem como...'")
                 
             except Exception as e:
-                st.warning(f"Erro na imagem: {e}")
+                st.warning(f"Não foi possível gerar a imagem: {e}")
 
     st.markdown("---")
     p, i = get_price_info(pais)
     st.markdown(f"<div style='text-align: center; color: gray;'>Licença: {pais.split('(')[0]} • {p}</div>", unsafe_allow_html=True)
+    st.markdown(f"<div style='text-align: center; margin-top: 10px;'><a href='{LINK_TALLY}' target='_blank' style='color: #2563eb; text-decoration: none; font-weight: bold;'>Gerir Subscrição ➔</a></div>", unsafe_allow_html=True)
