@@ -17,9 +17,18 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# --- CONEXÃO À BASE DE DADOS (LINKS REAIS JÁ INSERIDOS) ---
+# --- LINKS (JÁ CONFIGURADOS) ---
 LINK_DA_BASE_DE_DADOS = "https://docs.google.com/spreadsheets/d/e/2PACX-1vT_xyKHdsk9og2mRKE5uZBKcANNFtvx8wuUhR3a7gV-TFlZeSuU2wzJB_SjfkUKKIqVhh3LcaRr8Wn3/pub?gid=0&single=true&output=csv"
 LINK_TALLY = "https://tally.so/r/81qLVx"
+
+# --- INICIALIZAÇÃO DE ESTADO (CORREÇÃO DO ERRO) ---
+# Isto garante que as variáveis existem sempre, evitando o AttributeError
+if "user_type" not in st.session_state:
+    st.session_state.user_type = None
+if "user_email" not in st.session_state:
+    st.session_state.user_email = ""
+if "demo_count" not in st.session_state:
+    st.session_state.demo_count = 0
 
 @st.cache_data(ttl=60)
 def carregar_clientes():
@@ -36,9 +45,6 @@ def carregar_clientes():
 
 # --- SISTEMA DE LOGIN ---
 def check_login():
-    if "user_type" not in st.session_state:
-        st.session_state.user_type = None
-
     if st.session_state.user_type:
         return True
 
@@ -55,15 +61,15 @@ def check_login():
             btn_pro = st.form_submit_button("Entrar")
             
             if btn_pro:
-                # --- LÓGICA MASTER (SÓ PARA TI) ---
-                if senha_input == "SOU-O-DONO":  # <--- A TUA SENHA MESTRA
+                # 1. LOGIN MESTRE (Para ti)
+                if senha_input == "SOU-O-DONO":
                     st.session_state.user_type = "PRO"
                     st.session_state.user_email = "Administrador"
                     st.success("⚡ Modo Administrador Ativado!")
                     time.sleep(0.5)
                     st.rerun()
-                
-                # --- LÓGICA NORMAL (CLIENTES) ---
+
+                # 2. LOGIN CLIENTES
                 clientes = carregar_clientes()
                 if email_input in clientes and clientes[email_input] == senha_input:
                     st.session_state.user_type = "PRO"
@@ -78,6 +84,8 @@ def check_login():
         st.info("Tem direito a 3 gerações gratuitas.")
         if st.button("Começar Demo"):
             st.session_state.user_type = "DEMO"
+            # CORREÇÃO AQUI: Definimos um email fictício para não dar erro
+            st.session_state.user_email = "Visitante"
             st.rerun()
 
     return False
@@ -110,19 +118,28 @@ if check_login():
         except: st.write("🌍")
     with col2:
         st.title("Luso-IA Global")
+        
+        # MENSAGEM DE BOAS VINDAS SEGURA
         if st.session_state.user_email == "Administrador":
             st.info("👑 Logado como Dono (Acesso Total)")
         elif st.session_state.user_type == "PRO":
             st.success(f"✅ Conta PRO: {st.session_state.user_email}")
         else:
-            if "demo_count" not in st.session_state: st.session_state.demo_count = 0
             restantes = 3 - st.session_state.demo_count
-            st.warning(f"⚠️ Demo: {restantes} créditos")
+            st.warning(f"⚠️ Modo Demo: {restantes} créditos restantes")
 
-    # Bloqueio apenas para quem NÃO é PRO
+    # BLOQUEIO DEMO (APENAS SE NÃO FOR PRO/ADMIN)
     if st.session_state.user_type == "DEMO" and st.session_state.demo_count >= 3:
         st.error("🚫 A sua demonstração terminou!")
-        st.markdown(f"<a href='{LINK_TALLY}' target='_blank' style='background:#dc2626;color:white;padding:10px 20px;border-radius:8px;text-decoration:none;font-weight:bold;'>Subscrever Agora</a>", unsafe_allow_html=True)
+        st.markdown(f"""
+        <div style="background:#fee2e2;padding:20px;border-radius:10px;text-align:center;border:1px solid #ef4444;">
+            <h3 style="color:#991b1b;margin:0;">Gostou dos resultados?</h3>
+            <p style="color:#7f1d1d;">Subscreva agora para acesso ilimitado.</p>
+            <a href="{LINK_TALLY}" target="_blank" style="display:inline-block;background:#dc2626;color:white;padding:12px 25px;border-radius:8px;text-decoration:none;font-weight:bold;margin-top:10px;">
+               Subscrever Agora ➔
+            </a>
+        </div>
+        """, unsafe_allow_html=True)
         st.stop()
 
     try:
@@ -158,7 +175,9 @@ if check_login():
         btn = st.form_submit_button("✨ Gerar Texto + Imagem IA")
 
     if btn and negocio:
-        if st.session_state.user_type == "DEMO": st.session_state.demo_count += 1
+        # Incrementa contador APENAS se for DEMO
+        if st.session_state.user_type == "DEMO": 
+            st.session_state.demo_count += 1
         
         rede_nome = "Rede Social"
         if "2111463" in rede_selecionada: rede_nome = "Instagram"
@@ -197,5 +216,8 @@ if check_login():
 
     st.markdown("---")
     p, i = get_price_info(pais)
-    st.markdown(f"<div style='text-align: center; color: gray;'>Licença: {pais.split('(')[0]} • {p}</div>", unsafe_allow_html=True)
+    # Limpeza visual para rodapé
+    pais_limpo = pais.split('(')[0].replace('🇵🇹','').replace('🇧🇷','').replace('🇦🇴','').replace('🇲🇿','').replace('🇨🇻','').replace('🇬🇼','').replace('🇸🇹','').replace('🇹🇱','').strip()
+    
+    st.markdown(f"<div style='text-align: center; color: gray;'>Licença: {pais_limpo} • {p}</div>", unsafe_allow_html=True)
     st.markdown(f"<div style='text-align: center; margin-top: 10px;'><a href='{LINK_TALLY}' target='_blank' style='color: #2563eb; text-decoration: none; font-weight: bold;'>Gerir Subscrição ➔</a></div>", unsafe_allow_html=True)
