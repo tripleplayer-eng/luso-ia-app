@@ -8,6 +8,8 @@ import urllib.parse
 from datetime import datetime
 from streamlit import runtime
 from streamlit.runtime.scriptrunner import get_script_run_ctx
+from google.generativeai.types import HarmCategory, HarmBlockThreshold
+from google.api_core import exceptions # Para apanhar o erro 429
 
 # --- CONFIGURAÇÃO ---
 st.set_page_config(
@@ -34,12 +36,11 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # --- LINKS ---
-# Cola aqui os teus links se estes não forem os certos
 LINK_DA_BASE_DE_DADOS = "https://docs.google.com/spreadsheets/d/e/2PACX-1vT_xyKHdsk9og2mRKE5uZBKcANNFtvx8wuUhR3a7gV-TFlZeSuU2wzJB_SjfkUKKIqVhh3LcaRr8Wn3/pub?gid=0&single=true&output=csv"
 LINK_TALLY = "https://tally.so/r/81qLVx"
 
-# --- MOTOR DE IA FIXO (ESTÁVEL) ---
-# Forçamos o 1.5 Flash que tem limites muito altos (1500/dia)
+# --- MOTOR DE IA FIXO ---
+# Usamos o 1.5 Flash que é o mais rápido e generoso no plano grátis
 MODELO_ESTAVEL = "gemini-1.5-flash"
 
 # --- RASTREAMENTO IP ---
@@ -59,6 +60,19 @@ def get_remote_ip():
 
 usage_tracker = get_usage_tracker()
 user_ip = get_remote_ip()
+
+# --- FUNÇÃO DE GERAÇÃO COM RETRY AUTOMÁTICO (NOVO) ---
+def gerar_com_retry(model, prompt, tentativas=3):
+    for i in range(tentativas):
+        try:
+            return model.generate_content(prompt)
+        except exceptions.ResourceExhausted:
+            # Se der erro 429 (Quota), espera e tenta de novo
+            time.sleep(2 + i) # Espera 2s, depois 3s...
+            continue
+        except Exception as e:
+            return None
+    return None
 
 # --- CARREGAR CLIENTES ---
 @st.cache_data(ttl=60)
@@ -141,8 +155,15 @@ if check_login():
     try:
         api_key = st.secrets["GOOGLE_API_KEY"]
         genai.configure(api_key=api_key)
-        # CONFIGURAÇÃO FIXA DO MODELO
-        model = genai.GenerativeModel(MODELO_ESTAVEL)
+        
+        # SEGURANÇA NO MÁXIMO (Para evitar bloqueios de conteúdo)
+        safety_settings = {
+            HarmCategory.HARM_CATEGORY_HARASSMENT: HarmBlockThreshold.BLOCK_NONE,
+            HarmCategory.HARM_CATEGORY_HATE_SPEECH: HarmBlockThreshold.BLOCK_NONE,
+            HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT: HarmBlockThreshold.BLOCK_NONE,
+            HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT: HarmBlockThreshold.BLOCK_NONE,
+        }
+        model = genai.GenerativeModel(MODELO_ESTAVEL, safety_settings=safety_settings)
     except:
         st.error("Erro API Key.")
         st.stop()
@@ -195,7 +216,7 @@ if check_login():
 
         data_hoje = get_current_date()
 
-        # 1. TEXTO DO POST
+        # 1. TEXTO DO POST (COM RETRY AUTOMÁTICO)
         with st.spinner("A escrever..."):
             prompt = f"""
             Data Atual: {data_hoje}.
@@ -204,24 +225,29 @@ if check_login():
             Negócio: {negocio}. Tópico: {tema}. 
             Objetivo: Criar conteúdo focado em vendas e cultura local.
             """
-            try:
-                response = model.generate_content(prompt)
-                st.markdown(response.text)
-            except Exception as e: 
-                st.error(f"Erro momentâneo. Tente de novo em 30 segundos.")
+            
+            # Função inteligente que tenta 3 vezes antes de falhar
+            resposta = gerar_com_retry(model, prompt)
+            
+            if resposta:
+                st.markdown(resposta.text)
+            else:
+                st.warning("⚠️ O sistema está sobrecarregado. Por favor, aguarde 5 segundos e tente novamente.")
 
         # 2. INTELIGÊNCIA VISUAL
         with st.spinner("A preparar imagens..."):
             try:
-                # Prompt Visual para a IA (Extrair keywords)
-                prompt_visual = f"""
-                Identify 3 English keywords for a stock photo about: '{negocio} {tema}' in {pais}.
-                Output ONLY the 3 words. No intro.
-                """
-                visual_response = model.generate_content(prompt_visual)
-                clean_keywords = visual_response.text.strip()
+                # Usa a mesma função de retry para a parte visual
+                prompt_visual = f"Identify 3 English keywords for a stock photo about: '{negocio} {tema}' in {pais}. Output ONLY the 3 words."
+                visual_response = gerar_com_retry(model, prompt_visual)
                 
-                # A. Imagem IA (Pollinations com Prompt "Seguro")
+                clean_keywords = ""
+                if visual_response:
+                    clean_keywords = visual_response.text.strip()
+                else:
+                    clean_keywords = f"{negocio} {tema}" # Fallback se a IA falhar
+                
+                # A. Imagem IA
                 seed = random.randint(1, 999999)
                 prompt_img = f"Professional product photography of {clean_keywords}, {pais} aesthetic, cinematic lighting, 4k, photorealistic, no text, object focused, no people"
                 prompt_clean = urllib.parse.quote(prompt_img)
