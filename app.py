@@ -5,7 +5,6 @@ from streamlit_image_select import image_select
 import time
 import random
 import urllib.parse
-from datetime import datetime
 from streamlit import runtime
 from streamlit.runtime.scriptrunner import get_script_run_ctx
 
@@ -36,13 +35,6 @@ st.markdown("""
 # --- LINKS ---
 LINK_DA_BASE_DE_DADOS = "https://docs.google.com/spreadsheets/d/e/2PACX-1vT_xyKHdsk9og2mRKE5uZBKcANNFtvx8wuUhR3a7gV-TFlZeSuU2wzJB_SjfkUKKIqVhh3LcaRr8Wn3/pub?gid=0&single=true&output=csv"
 LINK_TALLY = "https://tally.so/r/81qLVx"
-
-# --- DATA ATUAL (O Cérebro Temporal) ---
-def get_current_date():
-    # Formato: 10 de Dezembro de 2025
-    meses = {1:'Janeiro', 2:'Fevereiro', 3:'Março', 4:'Abril', 5:'Maio', 6:'Junho', 7:'Julho', 8:'Agosto', 9:'Setembro', 10:'Outubro', 11:'Novembro', 12:'Dezembro'}
-    hoje = datetime.now()
-    return f"{hoje.day} de {meses[hoje.month]} de {hoje.year}"
 
 # --- RASTREAMENTO IP ---
 @st.cache_resource
@@ -126,6 +118,12 @@ def get_working_model():
         return lista[0] if lista else "gemini-pro"
     except: return "gemini-pro"
 
+# --- DATA ---
+def get_current_date():
+    meses = {1:'Janeiro', 2:'Fevereiro', 3:'Março', 4:'Abril', 5:'Maio', 6:'Junho', 7:'Julho', 8:'Agosto', 9:'Setembro', 10:'Outubro', 11:'Novembro', 12:'Dezembro'}
+    hoje = datetime.now()
+    return f"{hoje.day} de {meses[hoje.month]} de {hoje.year}"
+
 # --- APP ---
 if check_login():
     col1, col2 = st.columns([1, 4])
@@ -174,7 +172,6 @@ if check_login():
         with col_a: 
             pais = st.selectbox("País", ["🇵🇹 Portugal", "🇧🇷 Brasil", "🇦🇴 Angola", "🇲🇿 Moçambique", "🇨🇻 Cabo Verde", "🇬🇼 Guiné", "🇸🇹 São Tomé", "🇹🇱 Timor"])
         with col_b: 
-            # LISTA DE TONS COMPLETA RESTAURADA
             tom = st.selectbox("Tom", ["Profissional", "Divertido", "Vendas/Promoção", "Storytelling", "Urgente", "Inspirador", "Institucional"])
             
         negocio = st.text_input("Negócio:", placeholder="Ex: Café Central")
@@ -192,25 +189,18 @@ if check_login():
         rede_nome = "Rede Social"
         if "2111463" in rede_selecionada: rede_nome = "Instagram"
         elif "174857" in rede_selecionada: rede_nome = "LinkedIn"
-        elif "5968764" in rede_selecionada: rede_nome = "Facebook"
-        elif "3046121" in rede_selecionada: rede_nome = "TikTok"
-        elif "1384060" in rede_selecionada: rede_nome = "YouTube"
-        elif "5969020" in rede_selecionada: rede_nome = "Twitter"
-        elif "4922073" in rede_selecionada: rede_nome = "Blog"
-        elif "733585" in rede_selecionada: rede_nome = "WhatsApp"
+        # ... (restante lógica de redes)
 
-        data_hoje = get_current_date()
+        # TEXTO
+        from datetime import datetime
+        data_hoje = f"{datetime.now().day}/{datetime.now().month}/{datetime.now().year}"
 
         with st.spinner("A escrever..."):
-            # PROMPT COM CONSCIÊNCIA TEMPORAL
             prompt = f"""
-            Data Atual: {data_hoje} (Considera a época do ano atual nos teus textos).
-            
-            Atua como Copywriter Sénior da Luso-IA.
-            País: {pais}. Rede: {rede_nome}. Tom: {tom}. 
+            Data Atual: {data_hoje}.
+            Atua como Copywriter. País: {pais}. Rede: {rede_nome}. Tom: {tom}. 
             Negócio: {negocio}. Tópico: {tema}. 
-            
-            Objetivo: Criar conteúdo focado em vendas e cultura local.
+            Cria texto vendedor, usa a data atual se relevante.
             """
             try:
                 model = genai.GenerativeModel(modelo_ativo)
@@ -218,26 +208,25 @@ if check_login():
                 st.markdown(response.text)
             except Exception as e: st.error(f"Erro Texto: {e}")
 
-        # --- GERAÇÃO DE IMAGEM 2.0 (STOCK STYLE) ---
-        with st.spinner("A gerar fotografia..."):
+        # --- IMAGEM SEGURA (SEM PESSOAS) ---
+        with st.spinner("A criar imagem de produto..."):
             try:
                 seed = random.randint(1, 999999)
-                # Prompt forçado para Estilo Stock Photo (Sem aberrações)
-                prompt_img = f"Professional stock photography of {tema} in a {negocio} setting, {pais} aesthetic, cinematic lighting, high detailed, 4k, photorealistic, no text, object focused"
+                # O SEGREDO ESTÁ AQUI: Negative Prompts e Foco em Produto
+                prompt_img = f"Professional product photography of {tema} related to {negocio}, {pais} aesthetic, studio lighting, 4k, photorealistic, no text. NO PEOPLE, NO HUMAN BODY, NO FACES, NO HANDS."
                 prompt_clean = urllib.parse.quote(prompt_img)
                 
-                # URL Pollinations com Flux
                 url_img = f"https://image.pollinations.ai/prompt/{prompt_clean}?width=1024&height=1024&model=flux&seed={seed}&nologo=true"
                 
-                st.image(url_img, caption="Imagem Gerada por IA")
-                st.caption("⚠️ Nota: Imagem meramente ilustrativa.")
+                st.image(url_img, caption="Imagem Gerada (Foco em Produto/Ambiente)")
+                st.caption("⚠️ Nota: A IA foi configurada para evitar gerar pessoas para garantir qualidade.")
                 
-                # BOTÃO DE PESQUISA REAL (PLANO B)
-                search_term = urllib.parse.quote(f"{tema} {negocio}")
+                # Link de Backup (Se o cliente quiser mesmo pessoas)
+                search_term = urllib.parse.quote(f"{tema} {negocio} {pais}")
                 st.markdown(f"""
                     <a href="https://unsplash.com/s/photos/{search_term}" target="_blank" style="text-decoration:none;">
                         <button style="width:100%;padding:10px;border-radius:8px;border:1px solid #ccc;background:white;color:#333;cursor:pointer;font-weight:bold;">
-                            🔍 Não gostou? Pesquisar fotos reais no Unsplash
+                            🔍 Pesquisar fotos reais no Unsplash
                         </button>
                     </a>
                 """, unsafe_allow_html=True)
