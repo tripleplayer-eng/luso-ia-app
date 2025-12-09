@@ -5,6 +5,7 @@ from streamlit_image_select import image_select
 import time
 import random
 import urllib.parse
+from datetime import datetime
 from streamlit import runtime
 from streamlit.runtime.scriptrunner import get_script_run_ctx
 
@@ -67,6 +68,12 @@ def carregar_clientes():
         return {}
     except: return {}
 
+# --- DATA ---
+def get_current_date():
+    meses = {1:'Janeiro', 2:'Fevereiro', 3:'Março', 4:'Abril', 5:'Maio', 6:'Junho', 7:'Julho', 8:'Agosto', 9:'Setembro', 10:'Outubro', 11:'Novembro', 12:'Dezembro'}
+    hoje = datetime.now()
+    return f"{hoje.day} de {meses[hoje.month]} de {hoje.year}"
+
 # --- LOGIN ---
 def check_login():
     if "user_type" not in st.session_state: st.session_state.user_type = None
@@ -108,7 +115,7 @@ def check_login():
                 st.rerun()
     return False
 
-# --- MOTOR ---
+# --- MOTOR IA ---
 def get_working_model():
     try:
         lista = [m.name.replace('models/', '') for m in genai.list_models() if 'generateContent' in m.supported_generation_methods]
@@ -117,12 +124,6 @@ def get_working_model():
             if m in lista: return m
         return lista[0] if lista else "gemini-pro"
     except: return "gemini-pro"
-
-# --- DATA ---
-def get_current_date():
-    meses = {1:'Janeiro', 2:'Fevereiro', 3:'Março', 4:'Abril', 5:'Maio', 6:'Junho', 7:'Julho', 8:'Agosto', 9:'Setembro', 10:'Outubro', 11:'Novembro', 12:'Dezembro'}
-    hoje = datetime.now()
-    return f"{hoje.day} de {meses[hoje.month]} de {hoje.year}"
 
 # --- APP ---
 if check_login():
@@ -189,18 +190,23 @@ if check_login():
         rede_nome = "Rede Social"
         if "2111463" in rede_selecionada: rede_nome = "Instagram"
         elif "174857" in rede_selecionada: rede_nome = "LinkedIn"
-        # ... (restante lógica de redes)
+        elif "5968764" in rede_selecionada: rede_nome = "Facebook"
+        elif "3046121" in rede_selecionada: rede_nome = "TikTok"
+        elif "1384060" in rede_selecionada: rede_nome = "YouTube"
+        elif "5969020" in rede_selecionada: rede_nome = "Twitter"
+        elif "4922073" in rede_selecionada: rede_nome = "Blog"
+        elif "733585" in rede_selecionada: rede_nome = "WhatsApp"
 
-        # TEXTO
-        from datetime import datetime
-        data_hoje = f"{datetime.now().day}/{datetime.now().month}/{datetime.now().year}"
+        data_hoje = get_current_date()
 
+        # 1. TEXTO DO POST
         with st.spinner("A escrever..."):
             prompt = f"""
             Data Atual: {data_hoje}.
-            Atua como Copywriter. País: {pais}. Rede: {rede_nome}. Tom: {tom}. 
+            Atua como Copywriter Sénior da Luso-IA.
+            País: {pais}. Rede: {rede_nome}. Tom: {tom}. 
             Negócio: {negocio}. Tópico: {tema}. 
-            Cria texto vendedor, usa a data atual se relevante.
+            Objetivo: Criar conteúdo focado em vendas e cultura local.
             """
             try:
                 model = genai.GenerativeModel(modelo_ativo)
@@ -208,25 +214,35 @@ if check_login():
                 st.markdown(response.text)
             except Exception as e: st.error(f"Erro Texto: {e}")
 
-        # --- IMAGEM SEGURA (SEM PESSOAS) ---
-        with st.spinner("A criar imagem de produto..."):
+        # 2. INTELIGÊNCIA VISUAL (EXTRAIR KEYWORDS PARA IMAGENS)
+        with st.spinner("A preparar imagens..."):
             try:
+                # Perguntar à IA quais as melhores palavras-chave em INGLÊS (para os motores de busca)
+                # Isto limpa "Casa da Bia" e transforma em "Bakery Store Interior"
+                prompt_visual = f"""
+                Analyze the business '{negocio}' and topic '{tema}' in {pais}.
+                Output ONLY a simple 3-word visual description in English for a stock photo search.
+                Examples: 'modern coffee shop', 'dentist chair', 'clothing store sale'.
+                Do not use brand names, prices or emojis.
+                """
+                visual_response = model.generate_content(prompt_visual)
+                clean_keywords = visual_response.text.strip()
+                
+                # A. Imagem IA (Pollinations)
                 seed = random.randint(1, 999999)
-                # O SEGREDO ESTÁ AQUI: Negative Prompts e Foco em Produto
-                prompt_img = f"Professional product photography of {tema} related to {negocio}, {pais} aesthetic, studio lighting, 4k, photorealistic, no text. NO PEOPLE, NO HUMAN BODY, NO FACES, NO HANDS."
-                prompt_clean = urllib.parse.quote(prompt_img)
+                prompt_img = f"Professional product photography of {clean_keywords}, {pais} aesthetic, cinematic lighting, 4k, photorealistic, no text, object focused"
+                prompt_encoded = urllib.parse.quote(prompt_img)
+                url_img = f"https://image.pollinations.ai/prompt/{prompt_encoded}?width=1024&height=1024&model=flux&seed={seed}&nologo=true"
                 
-                url_img = f"https://image.pollinations.ai/prompt/{prompt_clean}?width=1024&height=1024&model=flux&seed={seed}&nologo=true"
+                st.image(url_img, caption="Imagem Gerada (IA)")
                 
-                st.image(url_img, caption="Imagem Gerada (Foco em Produto/Ambiente)")
-                st.caption("⚠️ Nota: A IA foi configurada para evitar gerar pessoas para garantir qualidade.")
-                
-                # Link de Backup (Se o cliente quiser mesmo pessoas)
-                search_term = urllib.parse.quote(f"{tema} {negocio} {pais}")
+                # B. Link Unsplash (Inteligente)
+                # Agora usamos as keywords limpas em Inglês, logo o Unsplash vai acertar sempre!
+                search_term = urllib.parse.quote(clean_keywords)
                 st.markdown(f"""
                     <a href="https://unsplash.com/s/photos/{search_term}" target="_blank" style="text-decoration:none;">
                         <button style="width:100%;padding:10px;border-radius:8px;border:1px solid #ccc;background:white;color:#333;cursor:pointer;font-weight:bold;">
-                            🔍 Pesquisar fotos reais no Unsplash
+                            🔍 Ver fotos reais no Unsplash (Backup)
                         </button>
                     </a>
                 """, unsafe_allow_html=True)
