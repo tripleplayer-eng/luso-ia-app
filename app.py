@@ -72,7 +72,6 @@ def check_login():
     if "user_type" not in st.session_state: st.session_state.user_type = None
     if st.session_state.user_type: return True
 
-    # LOGÓTIPO MAIOR (200px)
     try: st.image("logo.png", width=200) 
     except: pass
     
@@ -123,7 +122,6 @@ def get_working_model():
 if check_login():
     col1, col2 = st.columns([1, 4])
     with col1:
-        # Logótipo pequeno no topo também aumentado
         try: st.image("logo.png", width=100)
         except: st.write("🌍")
     with col2:
@@ -147,10 +145,21 @@ if check_login():
         st.stop()
 
     st.write("### Publicar onde?")
+    
+    # LISTA COMPLETA DE ÍCONES (TikTok, Blog, Twitter incluídos)
     rede_selecionada = image_select(
         label="",
-        images=["https://cdn-icons-png.flaticon.com/512/2111/2111463.png", "https://cdn-icons-png.flaticon.com/512/174/174857.png", "https://cdn-icons-png.flaticon.com/512/1384/1384060.png", "https://cdn-icons-png.flaticon.com/512/5968/5968764.png", "https://cdn-icons-png.flaticon.com/512/733/733585.png"],
-        captions=["Instagram", "LinkedIn", "YouTube", "Facebook", "WhatsApp"],
+        images=[
+            "https://cdn-icons-png.flaticon.com/512/2111/2111463.png", # Instagram
+            "https://cdn-icons-png.flaticon.com/512/174/174857.png",   # LinkedIn
+            "https://cdn-icons-png.flaticon.com/512/5968/5968764.png", # Facebook
+            "https://cdn-icons-png.flaticon.com/512/3046/3046121.png", # TikTok
+            "https://cdn-icons-png.flaticon.com/512/1384/1384060.png", # YouTube
+            "https://cdn-icons-png.flaticon.com/512/5969/5969020.png", # X / Twitter
+            "https://cdn-icons-png.flaticon.com/512/4922/4922073.png", # Blog
+            "https://cdn-icons-png.flaticon.com/512/733/733585.png"    # WhatsApp
+        ],
+        captions=["Instagram", "LinkedIn", "Facebook", "TikTok", "YouTube", "X (Twitter)", "Blog Post", "WhatsApp"],
         index=0, use_container_width=False
     )
 
@@ -170,11 +179,15 @@ if check_login():
                 if usage_tracker[user_ip] >= 3: time.sleep(1)
             else: st.rerun()
 
+        # Lógica de seleção corrigida para os novos ícones
         rede_nome = "Rede Social"
         if "2111463" in rede_selecionada: rede_nome = "Instagram"
         elif "174857" in rede_selecionada: rede_nome = "LinkedIn"
-        elif "1384060" in rede_selecionada: rede_nome = "YouTube"
         elif "5968764" in rede_selecionada: rede_nome = "Facebook"
+        elif "3046121" in rede_selecionada: rede_nome = "TikTok"
+        elif "1384060" in rede_selecionada: rede_nome = "YouTube Shorts"
+        elif "5969020" in rede_selecionada: rede_nome = "X (Twitter)"
+        elif "4922073" in rede_selecionada: rede_nome = "Artigo de Blog"
         elif "733585" in rede_selecionada: rede_nome = "WhatsApp"
 
         with st.spinner("A escrever..."):
@@ -192,7 +205,6 @@ if check_login():
                 prompt_clean = urllib.parse.quote(prompt_img)
                 url_img = f"https://image.pollinations.ai/prompt/{prompt_clean}?width=1024&height=1024&model=flux&seed={seed}&nologo=true"
                 st.image(url_img)
-                # AVISO LEGAL PEDIDO
                 st.caption("⚠️ **Nota:** Imagem gerada por IA meramente ilustrativa. Pode usar livremente se julgar conveniente.")
             except: st.warning("Imagem indisponível.")
 
