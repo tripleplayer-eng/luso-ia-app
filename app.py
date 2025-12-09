@@ -5,8 +5,9 @@ from streamlit_image_select import image_select
 import time
 import random
 import urllib.parse
+from streamlit.web.server.websocket_headers import _get_websocket_headers
 
-# --- CONFIGURAÇÃO DA PÁGINA ---
+# --- CONFIGURAÇÃO ---
 st.set_page_config(
     page_title="Luso-IA App", 
     page_icon="🇵🇹", 
@@ -14,34 +15,33 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# --- CSS MÁGICO (REMOVE RODAPÉS E MELHORA UI) ---
+# --- CSS NUCLEAR (LIMPEZA TOTAL) ---
 st.markdown("""
     <style>
-        /* Esconder Menu Hamburguer e Rodapé do Streamlit */
-        #MainMenu {visibility: hidden;}
-        footer {visibility: hidden;}
-        header {visibility: hidden;}
+        /* 1. Esconder Menu Hambúrguer (Topo Direito) */
+        #MainMenu {visibility: hidden; display: none;}
         
-        /* Melhorar Botões */
+        /* 2. Esconder Rodapé "Made with Streamlit" */
+        footer {visibility: hidden; display: none;}
+        
+        /* 3. Esconder Barra Colorida no Topo (Decoração) */
+        header {visibility: hidden; display: none;}
+        [data-testid="stDecoration"] {display: none;}
+        
+        /* 4. ESCONDER BOTÃO DE GESTÃO (A COROA/DEPLOY BUTTON) */
+        .stDeployButton {display: none;}
+        [data-testid="stStatusWidget"] {display: none;}
+        
+        /* 5. Melhorar Botões da App */
         .stButton button { 
-            width: 100%; 
-            border-radius: 12px; 
-            font-weight: 600; 
-            background: linear-gradient(90deg, #2563eb, #4f46e5); 
-            color: white; 
-            border: none;
-            padding: 0.8rem;
+            width: 100%; border-radius: 12px; font-weight: 600; 
+            background: linear-gradient(90deg, #2563eb, #4f46e5); color: white; border: none; padding: 0.8rem;
             box-shadow: 0 4px 6px rgba(0,0,0,0.1);
         }
-        .stButton button:hover { 
-            transform: scale(1.02); 
-            box-shadow: 0 6px 12px rgba(0,0,0,0.15);
-        }
+        .stButton button:hover { transform: scale(1.02); box-shadow: 0 6px 12px rgba(0,0,0,0.15); }
         
-        /* Espaço extra no fundo para mobile */
-        .block-container {
-            padding-bottom: 5rem;
-        }
+        /* 6. Espaço extra no fundo para mobile */
+        .block-container { padding-top: 2rem; padding-bottom: 5rem; }
     </style>
 """, unsafe_allow_html=True)
 
@@ -49,6 +49,23 @@ st.markdown("""
 LINK_DA_BASE_DE_DADOS = "https://docs.google.com/spreadsheets/d/e/2PACX-1vT_xyKHdsk9og2mRKE5uZBKcANNFtvx8wuUhR3a7gV-TFlZeSuU2wzJB_SjfkUKKIqVhh3LcaRr8Wn3/pub?gid=0&single=true&output=csv"
 LINK_TALLY = "https://tally.so/r/81qLVx"
 
+# --- RASTREAMENTO IP ---
+@st.cache_resource
+def get_usage_tracker():
+    return {}
+
+def get_remote_ip():
+    try:
+        headers = _get_websocket_headers()
+        if headers is None: return "local"
+        return headers.get("X-Forwarded-For", "unknown").split(",")[0]
+    except:
+        return "unknown"
+
+usage_tracker = get_usage_tracker()
+user_ip = get_remote_ip()
+
+# --- CARREGAR CLIENTES ---
 @st.cache_data(ttl=60)
 def carregar_clientes():
     try:
@@ -95,14 +112,21 @@ def check_login():
                     st.error("Dados incorretos.")
     
     with tab2:
-        st.info("3 Gerações Gratuitas")
-        if st.button("Começar Demo"):
-            st.session_state.user_type = "DEMO"
-            st.rerun()
+        usos_atuais = usage_tracker.get(user_ip, 0)
+        restantes = 3 - usos_atuais
+        
+        if restantes <= 0:
+             st.error("🚫 Já utilizou as suas demonstrações gratuitas.")
+             st.markdown(f"<a href='{LINK_TALLY}' target='_blank' style='display:block;text-align:center;background:#dc2626;color:white;padding:10px;border-radius:8px;text-decoration:none;font-weight:bold;'>Ativar Acesso Ilimitado</a>", unsafe_allow_html=True)
+        else:
+            st.info(f"Tem direito a {restantes} gerações neste dispositivo.")
+            if st.button("Começar Demo"):
+                st.session_state.user_type = "DEMO"
+                st.rerun()
 
     return False
 
-# --- MOTOR ---
+# --- MOTOR IA ---
 def get_working_model():
     try:
         lista = [m.name.replace('models/', '') for m in genai.list_models() if 'generateContent' in m.supported_generation_methods]
@@ -123,14 +147,14 @@ if check_login():
         if st.session_state.user_type == "PRO":
             st.success("✅ Modo PRO Ativo")
         else:
-            if "demo_count" not in st.session_state: st.session_state.demo_count = 0
-            restantes = 3 - st.session_state.demo_count
-            st.warning(f"⚠️ Demo: {restantes} restantes")
-
-    if st.session_state.user_type == "DEMO" and st.session_state.demo_count >= 3:
-        st.error("Demonstração terminada.")
-        st.markdown(f"<a href='{LINK_TALLY}' target='_blank' style='display:block;text-align:center;background:#dc2626;color:white;padding:10px;border-radius:8px;text-decoration:none;'>Subscrever Agora</a>", unsafe_allow_html=True)
-        st.stop()
+            usos_ip = usage_tracker.get(user_ip, 0)
+            restantes = 3 - usos_ip
+            if restantes <= 0:
+                st.error("Demonstração terminada.")
+                st.markdown(f"<a href='{LINK_TALLY}' target='_blank' style='display:block;text-align:center;background:#dc2626;color:white;padding:15px;border-radius:8px;text-decoration:none;font-size:1.1em;'>🔓 Desbloquear Acesso Ilimitado</a>", unsafe_allow_html=True)
+                st.stop()
+            else:
+                st.warning(f"⚠️ Demo: {restantes} restantes")
 
     try:
         api_key = st.secrets["GOOGLE_API_KEY"]
@@ -165,8 +189,11 @@ if check_login():
         btn = st.form_submit_button("✨ Criar Conteúdo")
 
     if btn and negocio:
-        if st.session_state.user_type == "DEMO": st.session_state.demo_count += 1
-        
+        if st.session_state.user_type == "DEMO":
+            current_usage = usage_tracker.get(user_ip, 0)
+            usage_tracker[user_ip] = current_usage + 1
+            if usage_tracker[user_ip] >= 3: st.rerun()
+
         rede_nome = "Rede Social"
         if "2111463" in rede_selecionada: rede_nome = "Instagram"
         elif "174857" in rede_selecionada: rede_nome = "LinkedIn"
@@ -183,23 +210,15 @@ if check_login():
             except Exception as e:
                 st.error(f"Erro Texto: {e}")
 
-        # --- GERAÇÃO DE IMAGEM MELHORADA (FLUX REALISM) ---
         with st.spinner("A gerar fotografia realista..."):
             try:
                 seed = random.randint(1, 999999)
-                # Prompt de Imagem Otimizado para evitar aberrações
-                # Keywords: Photorealistic, 4k, no text, no blur, centered
                 prompt_img = f"Photorealistic photo of {tema} inside a {negocio}, {pais} style context, natural lighting, high resolution, 4k, cinematic, highly detailed, no text, no watermark"
                 prompt_clean = urllib.parse.quote(prompt_img)
-                
-                # URL Pollinations forçando modelo FLUX-REALISM
                 url_img = f"https://image.pollinations.ai/prompt/{prompt_clean}?width=1024&height=1024&model=flux&seed={seed}&nologo=true"
-                
                 st.image(url_img, caption="Imagem Gerada (Flux AI)")
-                st.caption("Dica: Botão direito para guardar.")
             except:
                 st.warning("Imagem indisponível.")
 
-    # --- ESPAÇO EXTRA NO FUNDO (PARA O TALLY NÃO TAPAR) ---
     st.markdown("<br><br><br><br>", unsafe_allow_html=True)
     st.markdown(f"<div style='text-align: center; color: #ccc; font-size: 0.8rem;'>Luso-IA • {pais.split(' ')[1]}</div>", unsafe_allow_html=True)
