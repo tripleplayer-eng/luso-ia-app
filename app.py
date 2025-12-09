@@ -34,8 +34,13 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # --- LINKS ---
+# Cola aqui os teus links se estes não forem os certos
 LINK_DA_BASE_DE_DADOS = "https://docs.google.com/spreadsheets/d/e/2PACX-1vT_xyKHdsk9og2mRKE5uZBKcANNFtvx8wuUhR3a7gV-TFlZeSuU2wzJB_SjfkUKKIqVhh3LcaRr8Wn3/pub?gid=0&single=true&output=csv"
 LINK_TALLY = "https://tally.so/r/81qLVx"
+
+# --- MOTOR DE IA FIXO (ESTÁVEL) ---
+# Forçamos o 1.5 Flash que tem limites muito altos (1500/dia)
+MODELO_ESTAVEL = "gemini-1.5-flash"
 
 # --- RASTREAMENTO IP ---
 @st.cache_resource
@@ -115,16 +120,6 @@ def check_login():
                 st.rerun()
     return False
 
-# --- MOTOR IA ---
-def get_working_model():
-    try:
-        lista = [m.name.replace('models/', '') for m in genai.list_models() if 'generateContent' in m.supported_generation_methods]
-        preferidos = ["gemini-1.5-flash", "gemini-1.5-pro", "gemini-pro"]
-        for m in preferidos:
-            if m in lista: return m
-        return lista[0] if lista else "gemini-pro"
-    except: return "gemini-pro"
-
 # --- APP ---
 if check_login():
     col1, col2 = st.columns([1, 4])
@@ -146,7 +141,8 @@ if check_login():
     try:
         api_key = st.secrets["GOOGLE_API_KEY"]
         genai.configure(api_key=api_key)
-        modelo_ativo = get_working_model()
+        # CONFIGURAÇÃO FIXA DO MODELO
+        model = genai.GenerativeModel(MODELO_ESTAVEL)
     except:
         st.error("Erro API Key.")
         st.stop()
@@ -209,35 +205,31 @@ if check_login():
             Objetivo: Criar conteúdo focado em vendas e cultura local.
             """
             try:
-                model = genai.GenerativeModel(modelo_ativo)
                 response = model.generate_content(prompt)
                 st.markdown(response.text)
-            except Exception as e: st.error(f"Erro Texto: {e}")
+            except Exception as e: 
+                st.error(f"Erro momentâneo. Tente de novo em 30 segundos.")
 
-        # 2. INTELIGÊNCIA VISUAL (EXTRAIR KEYWORDS PARA IMAGENS)
+        # 2. INTELIGÊNCIA VISUAL
         with st.spinner("A preparar imagens..."):
             try:
-                # Perguntar à IA quais as melhores palavras-chave em INGLÊS (para os motores de busca)
-                # Isto limpa "Casa da Bia" e transforma em "Bakery Store Interior"
+                # Prompt Visual para a IA (Extrair keywords)
                 prompt_visual = f"""
-                Analyze the business '{negocio}' and topic '{tema}' in {pais}.
-                Output ONLY a simple 3-word visual description in English for a stock photo search.
-                Examples: 'modern coffee shop', 'dentist chair', 'clothing store sale'.
-                Do not use brand names, prices or emojis.
+                Identify 3 English keywords for a stock photo about: '{negocio} {tema}' in {pais}.
+                Output ONLY the 3 words. No intro.
                 """
                 visual_response = model.generate_content(prompt_visual)
                 clean_keywords = visual_response.text.strip()
                 
-                # A. Imagem IA (Pollinations)
+                # A. Imagem IA (Pollinations com Prompt "Seguro")
                 seed = random.randint(1, 999999)
-                prompt_img = f"Professional product photography of {clean_keywords}, {pais} aesthetic, cinematic lighting, 4k, photorealistic, no text, object focused"
-                prompt_encoded = urllib.parse.quote(prompt_img)
-                url_img = f"https://image.pollinations.ai/prompt/{prompt_encoded}?width=1024&height=1024&model=flux&seed={seed}&nologo=true"
+                prompt_img = f"Professional product photography of {clean_keywords}, {pais} aesthetic, cinematic lighting, 4k, photorealistic, no text, object focused, no people"
+                prompt_clean = urllib.parse.quote(prompt_img)
+                url_img = f"https://image.pollinations.ai/prompt/{prompt_clean}?width=1024&height=1024&model=flux&seed={seed}&nologo=true"
                 
                 st.image(url_img, caption="Imagem Gerada (IA)")
                 
-                # B. Link Unsplash (Inteligente)
-                # Agora usamos as keywords limpas em Inglês, logo o Unsplash vai acertar sempre!
+                # B. Link Unsplash
                 search_term = urllib.parse.quote(clean_keywords)
                 st.markdown(f"""
                     <a href="https://unsplash.com/s/photos/{search_term}" target="_blank" style="text-decoration:none;">
@@ -247,7 +239,8 @@ if check_login():
                     </a>
                 """, unsafe_allow_html=True)
                 
-            except: st.warning("Imagem indisponível.")
+            except: 
+                pass
 
     st.markdown("<br><br>", unsafe_allow_html=True)
     st.markdown(f"<div style='text-align: center; color: #ccc; font-size: 0.8rem;'>Luso-IA • {pais.split(' ')[1]}</div>", unsafe_allow_html=True)
