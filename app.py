@@ -1,7 +1,6 @@
 import streamlit as st
 import google.generativeai as genai
 import pandas as pd
-from streamlit_image_select import image_select
 import time
 import random
 import urllib.parse
@@ -18,34 +17,94 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# --- CSS PREMIUM (DARK MODE + INPUTS LEGÍVEIS) ---
+# --- CSS PREMIUM (LOGÓTIPOS REAIS + DARK MODE) ---
 st.markdown("""
     <style>
         /* 1. FUNDO GERAL */
         [data-testid="stAppViewContainer"] {
-            background-color: #020617;
+            background-color: #020617; /* Slate 950 */
         }
         
-        /* 2. INPUTS (Fundo Claro para Leitura Fácil) */
+        /* 2. TEXTOS E TÍTULOS */
+        h1, h2, h3, p, label, .stMarkdown, div { color: #e2e8f0 !important; }
+
+        /* 3. INPUTS (CLAROS) */
         .stTextInput input, .stTextArea textarea, .stSelectbox div[data-baseweb="select"] > div {
-            background-color: #f1f5f9 !important;
+            background-color: #f8fafc !important;
             color: #0f172a !important;
             border: 1px solid #cbd5e1 !important;
-            border-radius: 8px !important;
+            border-radius: 10px !important;
         }
         
-        /* 3. TÍTULOS E TEXTO */
-        h1, h2, h3, p, label, .stMarkdown {
-            color: #ffffff !important;
+        /* 4. SELETOR DE REDES (CARTÕES COM LOGÓTIPOS REAIS) */
+        div[role="radiogroup"] > label > div:first-child { display: none; } /* Esconde bolinha */
+        div[role="radiogroup"] {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr); /* 4 colunas em PC */
+            gap: 12px;
+        }
+        @media (max-width: 600px) {
+            div[role="radiogroup"] { grid-template-columns: repeat(2, 1fr); } /* 2 colunas em mobile */
         }
 
-        /* 4. REMOVER LIXO VISUAL STREAMLIT */
+        div[role="radiogroup"] label {
+            background-color: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            height: 110px; /* Altura fixa para caber o logo */
+            display: flex;
+            align-items: flex-end; /* Texto no fundo */
+            justify-content: center;
+            padding-bottom: 10px;
+            background-repeat: no-repeat;
+            background-position: center 20px; /* Logo no topo */
+            background-size: 40px; /* Tamanho do logo */
+            color: #94a3b8 !important;
+            font-size: 0.8rem;
+            font-weight: bold;
+        }
+
+        /* --- INJEÇÃO DOS LOGÓTIPOS (ORDEM DO MENU) --- */
+        /* 1. Instagram */
+        div[role="radiogroup"] label:nth-of-type(1) { background-image: url('https://cdn-icons-png.flaticon.com/128/174/174855.png'); }
+        /* 2. LinkedIn */
+        div[role="radiogroup"] label:nth-of-type(2) { background-image: url('https://cdn-icons-png.flaticon.com/128/3536/3536505.png'); }
+        /* 3. TikTok */
+        div[role="radiogroup"] label:nth-of-type(3) { background-image: url('https://cdn-icons-png.flaticon.com/128/3046/3046121.png'); background-size: 35px; }
+        /* 4. Facebook */
+        div[role="radiogroup"] label:nth-of-type(4) { background-image: url('https://cdn-icons-png.flaticon.com/128/5968/5968764.png'); }
+        /* 5. YouTube */
+        div[role="radiogroup"] label:nth-of-type(5) { background-image: url('https://cdn-icons-png.flaticon.com/128/1384/1384060.png'); }
+        /* 6. Twitter/X */
+        div[role="radiogroup"] label:nth-of-type(6) { background-image: url('https://cdn-icons-png.flaticon.com/128/5969/5969020.png'); background-size: 30px; }
+        /* 7. WhatsApp */
+        div[role="radiogroup"] label:nth-of-type(7) { background-image: url('https://cdn-icons-png.flaticon.com/128/733/733585.png'); }
+        /* 8. Blog */
+        div[role="radiogroup"] label:nth-of-type(8) { background-image: url('https://cdn-icons-png.flaticon.com/128/4922/4922073.png'); }
+
+        /* HOVER (LEVITAR) */
+        div[role="radiogroup"] label:hover {
+            transform: translateY(-5px);
+            background-color: rgba(255, 255, 255, 0.08);
+            border-color: #3b82f6;
+        }
+
+        /* SELECIONADO (BRILHO AZUL) */
+        div[role="radiogroup"] label[data-checked="true"] {
+            background-color: rgba(37, 99, 235, 0.2);
+            border-color: #3b82f6;
+            box-shadow: 0 0 20px rgba(59, 130, 246, 0.3);
+            color: white !important;
+        }
+
+        /* LIMPEZA DE LAYOUT */
         header[data-testid="stHeader"] {visibility: hidden; height: 0px;}
-        #MainMenu {visibility: hidden; display: none;}
-        footer {visibility: hidden; display: none;}
+        #MainMenu {display: none;}
+        footer {display: none;}
         .block-container {padding-top: 1rem !important; padding-bottom: 5rem !important;}
         
-        /* 5. BOTÃO DE ACÇÃO */
         .stButton button { 
             width: 100%; border-radius: 12px; font-weight: 700; font-size: 1.1rem;
             background: linear-gradient(90deg, #2563eb, #4f46e5); color: white; border: none; padding: 0.8rem;
@@ -59,33 +118,45 @@ st.markdown("""
 LINK_DA_BASE_DE_DADOS = "https://docs.google.com/spreadsheets/d/e/2PACX-1vT_xyKHdsk9og2mRKE5uZBKcANNFtvx8wuUhR3a7gV-TFlZeSuU2wzJB_SjfkUKKIqVhh3LcaRr8Wn3/pub?gid=0&single=true&output=csv"
 LINK_TALLY = "https://tally.so/r/81qLVx"
 
-# --- MOTOR DE IA BLINDADO ---
+# --- MOTOR DE IA "CAMALEÃO" (RESOLVE O 404) ---
+def get_best_model():
+    """Percorre a lista de modelos disponíveis na conta Google e escolhe o que funciona"""
+    try:
+        # Pede a lista real à Google
+        available_models = [m.name.replace('models/', '') for m in genai.list_models()]
+        
+        # Ordem de preferência
+        preference = ["gemini-1.5-flash", "gemini-1.5-pro", "gemini-1.0-pro", "gemini-pro"]
+        
+        for p in preference:
+            if p in available_models: return p
+            
+        return "gemini-pro" # O mais antigo, funciona sempre
+    except:
+        return "gemini-pro"
+
+# --- GERAÇÃO SEGURA ---
 def gerar_conteudo_seguro(prompt):
-    """Tenta várias chaves e mostra o erro real se falhar"""
     keys = []
-    
-    # Tenta carregar lista ou chave única
     if "GOOGLE_KEYS" in st.secrets: keys = st.secrets["GOOGLE_KEYS"]
     elif "GOOGLE_API_KEY" in st.secrets: keys = [st.secrets["GOOGLE_API_KEY"]]
     
-    if not keys: return None, "Nenhuma API Key encontrada nos Secrets."
-    
+    if not keys: return None, "Sem chaves API"
     random.shuffle(keys)
     
-    ultimo_erro = ""
+    # Define o modelo uma vez
+    model_name = get_best_model()
     
     for key in keys:
         try:
             genai.configure(api_key=key)
-            # Tenta o modelo Flash (Rápido e Gratuito)
-            model = genai.GenerativeModel("gemini-1.5-flash")
+            model = genai.GenerativeModel(model_name)
             response = model.generate_content(prompt)
             return response, None
         except Exception as e:
-            ultimo_erro = str(e)
             continue # Tenta a próxima chave
             
-    return None, ultimo_erro
+    return None, f"Erro de conexão (Modelo: {model_name})"
 
 # --- RASTREAMENTO IP ---
 @st.cache_resource
@@ -105,7 +176,6 @@ def get_remote_ip():
 usage_tracker = get_usage_tracker()
 user_ip = get_remote_ip()
 
-# --- CARREGAR CLIENTES ---
 @st.cache_data(ttl=60)
 def carregar_clientes():
     try:
@@ -118,11 +188,10 @@ def carregar_clientes():
         return {}
     except: return {}
 
-# --- DATA ---
 def get_current_date():
     meses = {1:'Janeiro', 2:'Fevereiro', 3:'Março', 4:'Abril', 5:'Maio', 6:'Junho', 7:'Julho', 8:'Agosto', 9:'Setembro', 10:'Outubro', 11:'Novembro', 12:'Dezembro'}
-    hoje = datetime.now()
-    return f"{hoje.day} de {meses[hoje.month]} de {hoje.year}"
+    h = datetime.now()
+    return f"{h.day} de {meses[h.month]} de {h.year}"
 
 # --- LOGIN ---
 def check_login():
@@ -133,23 +202,19 @@ def check_login():
     except: pass
     
     st.markdown("### 🔒 Login Luso-IA")
-    
-    tab1, tab2 = st.tabs(["🔑 Entrar (Pro)", "🎁 Testar (Grátis)"])
+    tab1, tab2 = st.tabs(["🔑 Entrar", "🎁 Testar"])
     
     with tab1:
         with st.form("login_form"):
             email = st.text_input("Email:")
             senha = st.text_input("Senha:", type="password")
             if st.form_submit_button("Entrar"):
-                # MODO ADMIN (SÓ PARA TI)
-                if senha == "SOU-O-DONO":
-                    st.session_state.user_type = "PRO"
-                    st.session_state.user_email = "Admin"
-                    st.success("Modo Admin Ativo")
-                    time.sleep(0.5)
-                    st.rerun()
-                
-                # MODO CLIENTE
+                try:
+                    if st.secrets["clientes"]["admin"] == senha:
+                        st.session_state.user_type = "PRO"
+                        st.session_state.user_email = "Admin"
+                        st.rerun()
+                except: pass
                 clientes = carregar_clientes()
                 if email in clientes and clientes[email] == senha:
                     st.session_state.user_type = "PRO"
@@ -160,11 +225,11 @@ def check_login():
     with tab2:
         usos_atuais = usage_tracker.get(user_ip, 0)
         if usos_atuais >= 3:
-             st.error("🚫 Já utilizou as suas 3 demonstrações gratuitas.")
-             st.markdown(f"<a href='{LINK_TALLY}' target='_blank' style='display:block;text-align:center;background:#dc2626;color:white;padding:12px;border-radius:8px;text-decoration:none;font-weight:bold;'>Ativar Acesso Ilimitado</a>", unsafe_allow_html=True)
+             st.error("🚫 Demonstrações esgotadas.")
+             st.markdown(f"<a href='{LINK_TALLY}' target='_blank' style='display:block;text-align:center;background:#dc2626;color:white;padding:12px;border-radius:8px;text-decoration:none;font-weight:bold;'>Ativar Acesso</a>", unsafe_allow_html=True)
         else:
             restantes = 3 - usos_atuais
-            st.info(f"Tem direito a {restantes} gerações neste dispositivo.")
+            st.info(f"Tem {restantes} gerações gratuitas.")
             if st.button("Começar Demo"):
                 st.session_state.user_type = "DEMO"
                 st.rerun()
@@ -188,22 +253,15 @@ if check_login():
                 st.stop()
             else: st.warning(f"⚠️ Demo: {restantes} restantes")
 
-    # --- SELETOR DE REDES COM ÍCONES (DE VOLTA!) ---
-    st.write("### Publicar onde?")
-    rede_selecionada = image_select(
-        label="",
-        images=[
-            "https://cdn-icons-png.flaticon.com/512/2111/2111463.png", # Instagram
-            "https://cdn-icons-png.flaticon.com/512/174/174857.png",   # LinkedIn
-            "https://cdn-icons-png.flaticon.com/512/5968/5968764.png", # Facebook
-            "https://cdn-icons-png.flaticon.com/512/3046/3046121.png", # TikTok
-            "https://cdn-icons-png.flaticon.com/512/1384/1384060.png", # YouTube
-            "https://cdn-icons-png.flaticon.com/512/5969/5969020.png", # X
-            "https://cdn-icons-png.flaticon.com/512/4922/4922073.png", # Blog
-            "https://cdn-icons-png.flaticon.com/512/733/733585.png"    # WhatsApp
-        ],
-        captions=["Instagram", "LinkedIn", "Facebook", "TikTok", "YouTube", "X (Twitter)", "Blog", "WhatsApp"],
-        index=0, use_container_width=False
+    # --- SELETOR DE REDES (CSS STYLE) ---
+    st.write("### 📢 Publicar onde?")
+    
+    # Nota: A ordem aqui tem de bater certo com a ordem do CSS lá em cima
+    rede_escolhida = st.radio(
+        "Selecione:",
+        ["Instagram", "LinkedIn", "TikTok", "Facebook", "YouTube", "Twitter", "WhatsApp", "Blog"],
+        horizontal=True,
+        label_visibility="collapsed"
     )
 
     with st.form("gerador"):
@@ -226,66 +284,46 @@ if check_login():
                 if usage_tracker[user_ip] >= 3: time.sleep(1)
             else: st.rerun()
 
-        rede_nome = "Rede Social"
-        if "2111463" in rede_selecionada: rede_nome = "Instagram"
-        elif "174857" in rede_selecionada: rede_nome = "LinkedIn"
-        elif "5968764" in rede_selecionada: rede_nome = "Facebook"
-        elif "3046121" in rede_selecionada: rede_nome = "TikTok"
-        elif "1384060" in rede_selecionada: rede_nome = "YouTube"
-        elif "5969020" in rede_selecionada: rede_nome = "Twitter"
-        elif "4922073" in rede_selecionada: rede_nome = "Blog"
-        elif "733585" in rede_selecionada: rede_nome = "WhatsApp"
-
         data_hoje = get_current_date()
 
         # 1. TEXTO
         with st.spinner("A escrever..."):
             prompt = f"""
             Data Atual: {data_hoje}.
-            Atua como Copywriter Sénior. País: {pais}. Rede: {rede_nome}. Tom: {tom}. 
+            Atua como Copywriter Sénior. País: {pais}. Rede: {rede_escolhida}. Tom: {tom}. 
             Negócio: {negocio}. Tópico: {tema}. 
-            Objetivo: Criar conteúdo focado em vendas e cultura local.
             """
             
             response, erro = gerar_conteudo_seguro(prompt)
             if response:
                 st.markdown(response.text)
             else:
-                # MOSTRAR O ERRO REAL PARA DIAGNÓSTICO
-                st.error(f"⚠️ Erro de ligação à IA: {erro}")
-                st.info("Sócio, verifica se o ficheiro 'requirements.txt' tem 'google-generativeai>=0.8.3'")
+                st.error(f"⚠️ Erro IA: {erro}")
+                # Fallback de diagnóstico
+                st.info(f"O modelo tentado foi: {get_best_model()}. Verifique se a API Key suporta este modelo.")
 
         # 2. IMAGEM
         with st.spinner("A preparar imagens..."):
             try:
-                # Prompt visual
+                # Palavras-chave limpas
                 clean_keywords = f"{negocio} {tema}"
-                try:
-                    if response:
-                        vis_resp, _ = gerar_conteudo_seguro(f"Identify 3 English keywords for a stock photo about: '{negocio} {tema}' in {pais}. Output ONLY the 3 words.")
+                if response:
+                    try:
+                        vis_resp, _ = gerar_conteudo_seguro(f"Identify 3 English keywords for stock photo: '{negocio} {tema}'. Output ONLY words.")
                         if vis_resp: clean_keywords = vis_resp.text.strip()
-                except: pass
+                    except: pass
                 
-                # A. Imagem IA (Pollinations)
+                # A. Imagem IA
                 seed = random.randint(1, 999999)
                 prompt_img = f"Professional product photography of {clean_keywords}, {pais} aesthetic, cinematic lighting, 4k, photorealistic, no text, object focused, no people"
                 prompt_clean = urllib.parse.quote(prompt_img)
                 url_img = f"https://image.pollinations.ai/prompt/{prompt_clean}?width=1024&height=1024&model=flux&seed={seed}&nologo=true"
-                
                 st.image(url_img, caption="Imagem Gerada (IA)")
-                st.caption("⚠️ **Nota:** Imagem meramente ilustrativa.")
                 
                 # B. Link Unsplash
                 termo_safe = re.sub(r'[^\w\s]', '', clean_keywords).strip().replace(" ", "-")
                 if not termo_safe: termo_safe = "business"
-                
-                st.markdown(f"""
-                    <a href="https://unsplash.com/s/photos/{termo_safe}" target="_blank" style="text-decoration:none;">
-                        <button style="width:100%;padding:10px;border-radius:8px;border:1px solid #334155;background:#1e293b;color:white;cursor:pointer;font-weight:bold;margin-top:10px;">
-                            🔍 Ver fotos reais no Unsplash (Backup)
-                        </button>
-                    </a>
-                """, unsafe_allow_html=True)
+                st.markdown(f"<a href='https://unsplash.com/s/photos/{termo_safe}' target='_blank'><button style='width:100%;padding:10px;border-radius:8px;border:1px solid #334155;background:#1e293b;color:white;cursor:pointer;font-weight:bold;margin-top:10px;'>🔍 Ver fotos reais no Unsplash</button></a>", unsafe_allow_html=True)
             except: pass
 
     st.markdown("<br><br>", unsafe_allow_html=True)
