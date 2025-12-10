@@ -17,29 +17,22 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# --- CSS PREMIUM (VISIBILIDADE MÁXIMA & BOTÕES GRANDES) ---
+# --- CSS PREMIUM (VISUAL ALINHADO & CONTRASTE) ---
 st.markdown("""
     <style>
-        /* 1. FUNDO GERAL */
-        [data-testid="stAppViewContainer"] {
-            background-color: #020617; /* Slate 950 */
-        }
-        
-        /* 2. TEXTOS GERAIS (Brancos) */
-        h1, h2, h3, p, label, .stMarkdown, div, span {
-            color: #e2e8f0 !important;
-        }
+        /* 1. FUNDO */
+        [data-testid="stAppViewContainer"] { background-color: #020617; }
+        h1, h2, h3, p, label, .stMarkdown, div { color: #e2e8f0 !important; }
 
-        /* 3. INPUTS E SELECTS (CORREÇÃO DE LEITURA) */
-        /* Fundo Branco, Letra Preta, Borda Visível */
+        /* 2. INPUTS (BRANCO COM LETRA PRETA) */
         .stTextInput input, .stTextArea textarea, .stSelectbox div[data-baseweb="select"] > div {
             background-color: #ffffff !important;
-            color: #000000 !important; /* PRETO PURO */
-            font-weight: 600 !important; /* LETRA MAIS GORDA */
+            color: #000000 !important; /* TEXTO PRETO */
+            font-weight: 600 !important;
             border: 2px solid #cbd5e1 !important;
-            border-radius: 12px !important;
+            border-radius: 10px !important;
         }
-        /* Corrigir a cor do texto selecionado no dropdown */
+        /* Corrigir a cor do texto dentro dos Selects */
         .stSelectbox div[data-baseweb="select"] span {
             color: #000000 !important;
         }
@@ -49,75 +42,75 @@ st.markdown("""
             box-shadow: 0 0 0 3px rgba(37,99,235,0.3) !important;
         }
         
-        /* 4. SELETOR DE REDES (BOTÕES GRANDES E CENTRADOS) */
-        div[role="radiogroup"] > label > div:first-child { display: none; }
+        /* 3. BOTÕES SOCIAIS (ALINHADOS E DESTACADOS) */
         div[role="radiogroup"] {
             display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            gap: 15px; /* Mais espaço entre eles */
-            margin-bottom: 20px;
+            grid-template-columns: repeat(4, 1fr); /* 4 por linha */
+            gap: 10px;
+            width: 100%; /* Ocupa a largura toda */
         }
         @media (max-width: 600px) {
             div[role="radiogroup"] { grid-template-columns: repeat(2, 1fr); }
         }
 
+        /* Estilo Base do Cartão */
         div[role="radiogroup"] label {
             background-color: rgba(255, 255, 255, 0.05);
             border: 1px solid rgba(255, 255, 255, 0.15);
-            border-radius: 18px;
+            border-radius: 12px;
             cursor: pointer;
             transition: all 0.2s ease;
-            height: 130px; /* MAIS ALTURA */
+            height: 100px;
             display: flex;
             align-items: flex-end;
             justify-content: center;
-            padding-bottom: 15px;
+            padding-bottom: 10px;
             background-repeat: no-repeat;
-            background-position: center 25px; 
-            background-size: 55px; /* ÍCONES MAIORES */
+            background-position: center 20px; 
+            background-size: 40px; 
             color: #cbd5e1 !important;
-            font-size: 0.9rem;
+            font-size: 0.8rem;
             font-weight: bold;
         }
+        div[role="radiogroup"] label > div:first-child { display: none; }
 
-        /* --- ÍCONES HD --- */
+        /* ÍCONES */
         div[role="radiogroup"] label:nth-of-type(1) { background-image: url('https://cdn-icons-png.flaticon.com/128/174/174855.png'); } /* Insta */
         div[role="radiogroup"] label:nth-of-type(2) { background-image: url('https://cdn-icons-png.flaticon.com/128/3536/3536505.png'); } /* LinkedIn */
-        div[role="radiogroup"] label:nth-of-type(3) { background-image: url('https://cdn-icons-png.flaticon.com/128/3046/3046121.png'); background-size: 50px; } /* TikTok */
+        div[role="radiogroup"] label:nth-of-type(3) { background-image: url('https://cdn-icons-png.flaticon.com/128/3046/3046121.png'); background-size: 35px; } /* TikTok */
         div[role="radiogroup"] label:nth-of-type(4) { background-image: url('https://cdn-icons-png.flaticon.com/128/5968/5968764.png'); } /* Facebook */
         div[role="radiogroup"] label:nth-of-type(5) { background-image: url('https://cdn-icons-png.flaticon.com/128/1384/1384060.png'); } /* YouTube */
-        div[role="radiogroup"] label:nth-of-type(6) { background-image: url('https://cdn-icons-png.flaticon.com/128/5969/5969020.png'); background-size: 45px; } /* X */
+        div[role="radiogroup"] label:nth-of-type(6) { background-image: url('https://cdn-icons-png.flaticon.com/128/5969/5969020.png'); background-size: 30px; } /* X */
         div[role="radiogroup"] label:nth-of-type(7) { background-image: url('https://cdn-icons-png.flaticon.com/128/733/733585.png'); } /* WhatsApp */
-        div[role="radiogroup"] label:nth-of-type(8) { background-image: url('https://cdn-icons-png.flaticon.com/128/10024/10024225.png'); } /* Blog (Ícone Novo Visível) */
+        div[role="radiogroup"] label:nth-of-type(8) { background-image: url('https://cdn-icons-png.flaticon.com/128/10024/10024225.png'); } /* Blog */
 
-        /* Hover */
-        div[role="radiogroup"] label:hover {
-            transform: translateY(-4px);
-            background-color: rgba(255, 255, 255, 0.15);
-            border-color: #60a5fa;
-        }
-
-        /* Selecionado */
+        /* ESTADO SELECIONADO (DESTAQUE FORTE) */
         div[role="radiogroup"] label[data-checked="true"] {
-            background: linear-gradient(135deg, #1d4ed8, #1e40af);
-            border-color: #60a5fa;
-            box-shadow: 0 0 25px rgba(37, 99, 235, 0.5);
+            background-color: #2563eb !important; /* Azul Forte */
+            border: 2px solid white !important;
+            box-shadow: 0 0 15px rgba(37, 99, 235, 0.8);
             color: white !important;
+            transform: scale(1.05);
+        }
+        div[role="radiogroup"] label:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+            border-color: #60a5fa;
         }
 
-        /* 5. LIMPEZA */
-        header[data-testid="stHeader"] {visibility: hidden; height: 0px;}
-        #MainMenu, footer {display: none;}
-        .block-container {padding-top: 1rem !important; padding-bottom: 5rem !important;}
-        
-        /* 6. BOTÃO DE AÇÃO (MAIS VISÍVEL) */
+        /* 4. BOTÃO GERAR (LETRA ESCURA PARA LER BEM) */
         .stButton button { 
-            width: 100%; border-radius: 12px; font-weight: 800; font-size: 1.2rem;
-            background: linear-gradient(90deg, #2563eb, #4f46e5); color: white; border: none; padding: 0.9rem;
+            width: 100%; border-radius: 12px; font-weight: 800; font-size: 1.1rem;
+            background: linear-gradient(90deg, #fbbf24, #d97706); /* Amarelo/Laranja para contraste */
+            color: #000000 !important; /* Texto Preto */
+            border: none; padding: 0.9rem;
             box-shadow: 0 4px 6px rgba(0,0,0,0.1); transition: all 0.3s;
-            text-transform: uppercase; letter-spacing: 0.5px;
+            text-transform: uppercase;
         }
-        .stButton button:hover { transform: scale(1.02); box-shadow: 0 8px 20px rgba(37, 99, 235, 0.6); }
+        .stButton button:hover { transform: scale(1.02); filter: brightness(1.1); }
+        
+        /* Limpeza */
+        header[data-testid="stHeader"], #MainMenu, footer {display: none !important;}
+        .block-container {padding-top: 1rem !important; padding-bottom: 5rem !important;}
     </style>
 """, unsafe_allow_html=True)
 
@@ -125,36 +118,38 @@ st.markdown("""
 LINK_DA_BASE_DE_DADOS = "https://docs.google.com/spreadsheets/d/e/2PACX-1vT_xyKHdsk9og2mRKE5uZBKcANNFtvx8wuUhR3a7gV-TFlZeSuU2wzJB_SjfkUKKIqVhh3LcaRr8Wn3/pub?gid=0&single=true&output=csv"
 LINK_TALLY = "https://tally.so/r/81qLVx"
 
-# --- FUNÇÃO DE GERAÇÃO (Tenta 1.5 Flash diretamente) ---
+# --- MOTOR DE IA "FORCE FIELD" ---
 def gerar_conteudo_seguro(prompt):
     keys = []
     if "GOOGLE_KEYS" in st.secrets: keys = st.secrets["GOOGLE_KEYS"]
     elif "GOOGLE_API_KEY" in st.secrets: keys = [st.secrets["GOOGLE_API_KEY"]]
     
-    if not keys: return None, "Sem chaves API configuradas."
+    if not keys: return None, "Sem chaves API."
     random.shuffle(keys)
+    
+    # LISTA DE MODELOS (DO MAIS RÁPIDO AO MAIS COMPATÍVEL)
+    # Removemos as versões beta para evitar erros 404
+    modelos_prioridade = ["gemini-1.5-flash", "gemini-1.5-flash-latest", "gemini-1.5-pro", "gemini-1.0-pro", "gemini-pro"]
     
     ultimo_erro = ""
     
-    # Lista de modelos a tentar (do mais rápido para o mais robusto)
-    modelos_para_tentar = ["gemini-1.5-flash", "gemini-1.5-pro"]
-
-    for modelo_nome in modelos_para_tentar:
+    # Tenta cada modelo com cada chave
+    for modelo in modelos_prioridade:
         for key in keys:
             try:
                 genai.configure(api_key=key)
-                model = genai.GenerativeModel(modelo_nome)
-                response = model.generate_content(prompt)
-                return response, None
+                model_ai = genai.GenerativeModel(modelo)
+                response = model_ai.generate_content(prompt)
+                return response, None # Sucesso!
             except Exception as e:
                 ultimo_erro = str(e)
-                # Se for erro de quota (429), tenta outra chave. 
-                # Se for erro de modelo (404), o loop exterior muda o modelo.
-                if "429" in str(e): continue 
-                if "404" in str(e): break # Sai deste loop de chaves e muda de modelo
+                # Se for erro de quota (429), tenta outra chave
+                if "429" in str(e): continue
+                # Se for erro de modelo não encontrado (404), pára esta chave e tenta o próximo modelo
+                if "404" in str(e): break 
                 continue
             
-    return None, f"Falha na conexão: {ultimo_erro}. Verifique se a API Key tem permissões para 'Vertex AI' ou 'Generative AI'."
+    return None, f"Todos os modelos falharam. Último erro: {ultimo_erro}"
 
 # --- RASTREAMENTO IP ---
 @st.cache_resource
@@ -200,7 +195,6 @@ def check_login():
     except: pass
     
     st.markdown("### 🔒 Login Luso-IA")
-    
     tab1, tab2 = st.tabs(["🔑 Entrar", "🎁 Testar"])
     
     with tab1:
@@ -252,13 +246,7 @@ if check_login():
                 st.stop()
             else: st.warning(f"⚠️ Demo: {restantes} restantes")
 
-    try:
-        if "GOOGLE_KEYS" not in st.secrets and "GOOGLE_API_KEY" not in st.secrets:
-             st.error("Erro configuração chaves.")
-             st.stop()
-    except: pass
-
-    # --- SELETOR DE REDES (CSS STYLE) ---
+    # --- SELETOR DE REDES (Cartões CSS) ---
     st.write("### 📢 Publicar onde?")
     
     rede_escolhida = st.radio(
@@ -278,7 +266,7 @@ if check_login():
             
         negocio = st.text_input("Negócio:", placeholder="Ex: Café Central")
         tema = st.text_area("Tópico:", placeholder="Ex: Promoção de pequeno-almoço")
-        btn = st.form_submit_button("✨ Criar Conteúdo")
+        btn = st.form_submit_button("✨ CRIAR CONTEÚDO")
 
     if btn and negocio:
         if st.session_state.user_type == "DEMO":
@@ -294,7 +282,8 @@ if check_login():
         with st.spinner("A escrever..."):
             prompt = f"""
             Data Atual: {data_hoje}.
-            Atua como Copywriter Sénior. País: {pais}. Rede: {rede_escolhida}. Tom: {tom}. 
+            Atua como Copywriter Sénior da Luso-IA.
+            País: {pais}. Rede: {rede_escolhida}. Tom: {tom}. 
             Negócio: {negocio}. Tópico: {tema}. 
             Objetivo: Criar conteúdo focado em vendas e cultura local.
             """
@@ -304,11 +293,12 @@ if check_login():
                 st.markdown(response.text)
             else:
                 st.error(f"⚠️ Erro IA: {erro}")
-                st.warning("Dica: Verifique se a sua API Key no Google AI Studio está ativa e tem quota.")
+                st.info("A tentar modelos alternativos...")
 
         # 2. IMAGEM
         with st.spinner("A preparar imagens..."):
             try:
+                # Prompt visual
                 clean_keywords = f"{negocio} {tema}"
                 try:
                     if response:
@@ -316,14 +306,14 @@ if check_login():
                         if vis_resp: clean_keywords = vis_resp.text.strip()
                 except: pass
                 
+                # A. Imagem IA
                 seed = random.randint(1, 999999)
-                # Prompt de Imagem Seguro (Sem pessoas)
                 prompt_img = f"Professional product photography of {clean_keywords}, {pais} aesthetic, cinematic lighting, 4k, photorealistic, no text, object focused, no people"
                 prompt_clean = urllib.parse.quote(prompt_img)
                 url_img = f"https://image.pollinations.ai/prompt/{prompt_clean}?width=1024&height=1024&model=flux&seed={seed}&nologo=true"
-                
                 st.image(url_img, caption="Imagem Gerada (IA)")
                 
+                # B. Link Unsplash
                 termo_safe = re.sub(r'[^\w\s]', '', clean_keywords).strip().replace(" ", "-")
                 if not termo_safe: termo_safe = "business"
                 st.markdown(f"<a href='https://unsplash.com/s/photos/{termo_safe}' target='_blank'><button style='width:100%;padding:10px;border-radius:8px;border:1px solid #334155;background:#1e293b;color:white;cursor:pointer;font-weight:bold;margin-top:10px;'>🔍 Ver fotos reais no Unsplash</button></a>", unsafe_allow_html=True)
