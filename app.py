@@ -38,45 +38,51 @@ st.markdown("""
 LINK_DA_BASE_DE_DADOS = "https://docs.google.com/spreadsheets/d/e/2PACX-1vT_xyKHdsk9og2mRKE5uZBKcANNFtvx8wuUhR3a7gV-TFlZeSuU2wzJB_SjfkUKKIqVhh3LcaRr8Wn3/pub?gid=0&single=true&output=csv"
 LINK_TALLY = "https://tally.so/r/81qLVx"
 
-# --- MOTOR DE IA COM ROTAÇÃO DE CHAVES (A CORREÇÃO) ---
-def configurar_ia_rotativa():
-    """Tenta configurar a IA com uma das chaves disponíveis"""
+# --- MOTOR DE IA INTELIGENTE (AUTO-DESCOBERTA) ---
+def get_best_model_name():
+    """Pergunta à Google quais os modelos disponíveis e escolhe o melhor."""
     try:
-        # Tenta ler a lista nova
-        keys = st.secrets["GOOGLE_KEYS"]
-        # Escolhe uma aleatória para distribuir carga
-        key = random.choice(keys)
-        genai.configure(api_key=key)
-        return True
-    except Exception:
-        # Fallback para o método antigo se a lista não existir
-        try:
-            key = st.secrets["GOOGLE_API_KEY"]
-            genai.configure(api_key=key)
-            return True
-        except:
-            return False
+        modelos_disponiveis = []
+        for m in genai.list_models():
+            if 'generateContent' in m.supported_generation_methods:
+                modelos_disponiveis.append(m.name.replace('models/', ''))
+        
+        # Lista de preferência (do melhor/mais barato para o mais antigo)
+        preferencias = ["gemini-1.5-flash", "gemini-1.5-pro", "gemini-1.0-pro", "gemini-pro"]
+        
+        for p in preferencias:
+            if p in modelos_disponiveis:
+                return p
+        
+        # Se nenhum preferido existir, devolve o primeiro da lista
+        return modelos_disponiveis[0] if modelos_disponiveis else "gemini-pro"
+    except:
+        return "gemini-pro" # Fallback de segurança máxima
 
-# Função para gerar conteúdo tentando várias chaves se der erro
+# --- FUNÇÃO DE GERAÇÃO COM ROTAÇÃO DE CHAVES ---
 def gerar_conteudo_seguro(prompt):
-    keys = st.secrets["GOOGLE_KEYS"]
-    # Baralha para não usar sempre a mesma ordem
+    try:
+        keys = st.secrets["GOOGLE_KEYS"]
+    except:
+        # Se não houver lista, tenta chave única
+        try: keys = [st.secrets["GOOGLE_API_KEY"]]
+        except: return None
+
     random.shuffle(keys)
-    
+    nome_modelo = get_best_model_name() # Descobre o nome correto dinamicamente
+
     for key in keys:
         try:
             genai.configure(api_key=key)
-            model = genai.GenerativeModel("gemini-1.5-flash")
+            model = genai.GenerativeModel(nome_modelo)
             response = model.generate_content(prompt)
             return response
         except exceptions.ResourceExhausted:
-            # Se esta chave estourou o limite, passa para a próxima no loop
+            continue # Tenta a próxima chave
+        except Exception:
             continue
-        except Exception as e:
-            st.error(f"Erro técnico: {e}")
-            return None
             
-    return None # Se todas falharem
+    return None
 
 # --- RASTREAMENTO IP ---
 @st.cache_resource
@@ -132,16 +138,14 @@ def check_login():
             email = st.text_input("Email:")
             senha = st.text_input("Senha:", type="password")
             if st.form_submit_button("Entrar"):
-                # Verifica segredos locais (admin)
+                # Verifica admin local
                 try:
-                    clientes_locais = st.secrets["clientes"]
-                    if email in clientes_locais and clientes_locais[email] == senha:
-                        st.session_state.user_type = "PRO"
-                        st.session_state.user_email = email
-                        st.rerun()
+                    if st.secrets["clientes"]["admin"] == senha:
+                         st.session_state.user_type = "PRO"
+                         st.session_state.user_email = "Admin"
+                         st.rerun()
                 except: pass
 
-                # Verifica Base de Dados Excel
                 clientes = carregar_clientes()
                 if email in clientes and clientes[email] == senha:
                     st.session_state.user_type = "PRO"
@@ -180,10 +184,12 @@ if check_login():
                 st.stop()
             else: st.warning(f"⚠️ Demo: {restantes} restantes")
 
-    # Configuração Inicial da IA
-    if not configurar_ia_rotativa():
-        st.error("Erro: Nenhuma API Key válida encontrada nos Segredos.")
-        st.stop()
+    # Verifica se há chaves configuradas antes de começar
+    try:
+        if "GOOGLE_KEYS" not in st.secrets and "GOOGLE_API_KEY" not in st.secrets:
+             st.error("Erro: Nenhuma API Key encontrada. Configure os Secrets.")
+             st.stop()
+    except: pass
 
     st.write("### Publicar onde?")
     rede_selecionada = image_select(
@@ -233,7 +239,7 @@ if check_login():
 
         data_hoje = get_current_date()
 
-        # 1. TEXTO DO POST (COM ROTAÇÃO DE CHAVES)
+        # 1. TEXTO
         with st.spinner("A escrever..."):
             prompt = f"""
             Data Atual: {data_hoje}.
@@ -243,35 +249,34 @@ if check_login():
             Objetivo: Criar conteúdo focado em vendas e cultura local.
             """
             
-            # Aqui está a magia: usa a função de rotação
-            resposta = gerar_conteudo_seguro(prompt)
+            # CHAMA A FUNÇÃO DE ROTAÇÃO INTELIGENTE
+            response = gerar_conteudo_seguro(prompt)
             
-            if resposta:
-                st.markdown(resposta.text)
+            if response:
+                st.markdown(response.text)
             else:
-                st.error("⚠️ Sistema em sobrecarga máxima. Por favor, aguarde 1 minuto.")
+                st.error("⚠️ Erro de ligação à IA. Por favor, tente novamente em alguns segundos.")
 
-        # 2. INTELIGÊNCIA VISUAL
+        # 2. IMAGEM
         with st.spinner("A preparar imagens..."):
             try:
+                # Usa a mesma função segura para as keywords
                 prompt_visual = f"Identify 3 English keywords for a stock photo about: '{negocio} {tema}' in {pais}. Output ONLY the 3 words."
-                # Usa rotação também para a imagem
                 visual_response = gerar_conteudo_seguro(prompt_visual)
                 
                 clean_keywords = ""
                 if visual_response:
                     clean_keywords = visual_response.text.strip()
                 else:
-                    clean_keywords = f"{negocio} {tema}" 
+                    clean_keywords = f"{negocio} {tema}"
                 
-                # A. Imagem IA (Segura)
+                # A. Imagem IA
                 seed = random.randint(1, 999999)
                 prompt_img = f"Professional product photography of {clean_keywords}, {pais} aesthetic, cinematic lighting, 4k, photorealistic, no text, object focused, no people"
                 prompt_clean = urllib.parse.quote(prompt_img)
                 url_img = f"https://image.pollinations.ai/prompt/{prompt_clean}?width=1024&height=1024&model=flux&seed={seed}&nologo=true"
                 
                 st.image(url_img, caption="Imagem Gerada (IA)")
-                st.caption("⚠️ **Nota:** Imagem gerada por IA meramente ilustrativa.")
                 
                 # B. Link Unsplash
                 search_term = urllib.parse.quote(clean_keywords)
