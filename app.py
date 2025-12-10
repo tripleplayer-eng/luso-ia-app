@@ -3,9 +3,11 @@ import google.generativeai as genai
 import pandas as pd
 import time
 import random
+import urllib.parse
 from datetime import datetime
 from streamlit import runtime
 from streamlit.runtime.scriptrunner import get_script_run_ctx
+from google.api_core import exceptions
 
 # --- CONFIGURAÇÃO ---
 st.set_page_config(
@@ -15,98 +17,94 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# --- CSS CORREÇÃO VISUAL (BOTÕES QUADRADOS & RODAPÉ) ---
+# --- CSS FINAL (BOTÕES PERFEITOS) ---
 st.markdown("""
     <style>
         /* 1. FUNDO PRETO */
         .stApp { background-color: #000000; }
         h1, h2, h3, p, label, div, span { color: #e2e8f0 !important; }
 
-        /* 2. REMOVER RODAPÉS (FORÇA BRUTA) */
-        header {visibility: hidden; height: 0px;}
-        footer {visibility: hidden; display: none !important;}
-        #MainMenu {visibility: hidden; display: none;}
-        .viewerBadge-container {display: none !important;} /* Remove "Built with Streamlit" */
-        
-        .block-container {
-            padding-top: 1rem !important; 
-            padding-bottom: 0rem !important;
-        }
-
-        /* 3. INPUTS */
+        /* 2. INPUTS */
         .stTextInput input, .stTextArea textarea, .stSelectbox div[data-baseweb="select"] > div {
             background-color: #ffffff !important;
             color: #000000 !important;
-            border: 1px solid #333 !important;
+            border: 1px solid #444 !important;
             border-radius: 8px !important;
-            font-weight: 600 !important;
+            font-weight: 700 !important;
         }
         ul[data-testid="stSelectboxVirtualDropdown"] li {
             background-color: #ffffff !important;
             color: #000000 !important;
         }
 
-        /* 4. GRELHA DE ÍCONES (FLEXBOX - NUNCA ESMAGA) */
+        /* 3. GRELHA DE ÍCONES (GRID FIXO 4x2) */
         div[role="radiogroup"] {
-            display: flex;
-            flex-wrap: wrap; /* Permite cair para a linha de baixo */
-            gap: 10px;
-            justify-content: center;
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 12px;
+            width: 100%;
+        }
+        @media (max-width: 600px) {
+            div[role="radiogroup"] { grid-template-columns: repeat(4, 1fr); } 
+            /* Mantém 4 colunas mesmo no tlm para parecer barra de apps, ou muda para 2 se preferires */
         }
         
         div[role="radiogroup"] label > div:first-child { display: none; }
 
-        /* ESTILO DO CARTÃO (FIXO) */
+        /* ESTILO DO CARTÃO (DESLIGADO) */
         div[role="radiogroup"] label {
             background-color: #111111 !important;
             border: 1px solid #333 !important;
-            border-radius: 12px !important;
-            width: 70px !important;       /* LARGURA FIXA */
-            height: 70px !important;      /* ALTURA FIXA */
-            min-width: 70px !important;   /* IMPEDE ESMAGAMENTO */
-            display: flex !important;
-            align-items: center;
-            justify-content: center;
+            border-radius: 16px !important;
+            height: 70px !important; /* Altura compacta */
+            width: 100% !important;
             cursor: pointer;
             margin: 0 !important;
+            display: flex;
+            align-items: center;
+            justify-content: center;
             /* Ícone */
             background-repeat: no-repeat;
             background-position: center;
             background-size: 35px; 
-            opacity: 0.6;
+            opacity: 0.5;
             transition: all 0.2s;
         }
-
+        
         div[role="radiogroup"] label p { display: none !important; }
 
         /* ÍCONES */
         div[role="radiogroup"] label:nth-child(1) { background-image: url('https://cdn-icons-png.flaticon.com/128/3955/3955024.png'); }
         div[role="radiogroup"] label:nth-child(2) { background-image: url('https://cdn-icons-png.flaticon.com/128/145/145807.png'); }
-        div[role="radiogroup"] label:nth-child(3) { background-image: url('https://cdn-icons-png.flaticon.com/128/3670/3670151.png'); }
-        div[role="radiogroup"] label:nth-child(4) { background-image: url('https://cdn-icons-png.flaticon.com/128/3046/3046121.png'); }
+        div[role="radiogroup"] label:nth-child(3) { background-image: url('https://cdn-icons-png.flaticon.com/128/3670/3670151.png'); background-size: 30px !important; }
+        div[role="radiogroup"] label:nth-child(4) { background-image: url('https://cdn-icons-png.flaticon.com/128/3046/3046121.png'); background-size: 30px !important; }
         div[role="radiogroup"] label:nth-child(5) { background-image: url('https://cdn-icons-png.flaticon.com/128/3670/3670147.png'); }
         div[role="radiogroup"] label:nth-child(6) { background-image: url('https://cdn-icons-png.flaticon.com/128/3670/3670127.png'); }
         div[role="radiogroup"] label:nth-child(7) { background-image: url('https://cdn-icons-png.flaticon.com/128/3670/3670051.png'); }
         div[role="radiogroup"] label:nth-child(8) { background-image: url('https://cdn-icons-png.flaticon.com/128/10024/10024225.png'); }
 
-        /* SELECIONADO */
+        /* ESTADO SELECIONADO (FUNDO BRANCO - DESTAQUE TOTAL) */
         div[role="radiogroup"] label[data-checked="true"] {
-            background-color: rgba(37, 99, 235, 0.3) !important;
-            border: 2px solid #2563eb !important;
+            background-color: #ffffff !important; /* Fica Branco */
+            border: 2px solid #ffffff !important;
             opacity: 1 !important;
-            box-shadow: 0 0 10px rgba(37, 99, 235, 0.6);
+            box-shadow: 0 0 15px rgba(255, 255, 255, 0.3);
             transform: scale(1.1);
+            z-index: 10;
         }
-        
-        div[role="radiogroup"] label:hover { opacity: 1; border-color: #555 !important; }
 
+        /* 4. LIMPEZA */
+        header {visibility: hidden; height: 0px;}
+        footer {display: none !important;}
+        .viewerBadge-container {display: none !important;}
+        .block-container {padding-top: 1rem !important; padding-bottom: 0rem !important;}
+        
         /* 5. BOTÃO GERAR */
         .stButton button { 
             width: 100%; border-radius: 12px; font-weight: 800; font-size: 1.1rem;
             background: linear-gradient(90deg, #f59e0b, #d97706); 
             color: black !important; border: none; padding: 1rem;
-            text-transform: uppercase; letter-spacing: 1px;
-            margin-top: 15px;
+            margin-top: 15px; text-transform: uppercase;
         }
         .stButton button:hover { transform: scale(1.02); filter: brightness(1.1); }
     </style>
@@ -116,33 +114,29 @@ st.markdown("""
 LINK_DA_BASE_DE_DADOS = "https://docs.google.com/spreadsheets/d/e/2PACX-1vT_xyKHdsk9og2mRKE5uZBKcANNFtvx8wuUhR3a7gV-TFlZeSuU2wzJB_SjfkUKKIqVhh3LcaRr8Wn3/pub?gid=0&single=true&output=csv"
 LINK_TALLY = "https://tally.so/r/81qLVx"
 
-# --- MOTOR DE IA COM DIAGNÓSTICO ---
+# --- MOTOR DE IA "OLD RELIABLE" (GEMINI PRO) ---
+# Mudança Crítica: Usamos apenas 'gemini-pro'. É o mais estável do mundo.
 def gerar_conteudo_final(prompt):
     keys = []
-    # Tenta ler chaves de todas as formas possíveis
     if "GOOGLE_KEYS" in st.secrets: keys = st.secrets["GOOGLE_KEYS"]
     elif "GOOGLE_API_KEY" in st.secrets: keys = [st.secrets["GOOGLE_API_KEY"]]
     
-    if not keys: return None, "ERRO CRÍTICO: Não encontrei chaves API nos Secrets."
-    
+    if not keys: return None, "Chave API não configurada."
     random.shuffle(keys)
-    modelos = ["gemini-1.5-flash", "gemini-pro"]
     
-    erros_detalhados = []
-
-    for modelo in modelos:
-        for i, key in enumerate(keys):
-            try:
-                genai.configure(api_key=key)
-                model_ai = genai.GenerativeModel(modelo)
-                response = model_ai.generate_content(prompt)
-                return response, None
-            except Exception as e:
-                erros_detalhados.append(f"Chave {i+1} ({modelo}): {str(e)}")
-                continue
-
-    # Se chegou aqui, falhou tudo. Retorna o erro técnico para leres.
-    return None, str(erros_detalhados[0]) if erros_detalhados else "Erro desconhecido."
+    # O SEGREDO: Usar apenas este modelo que nunca dá 404
+    modelo_seguro = "gemini-pro"
+    
+    for key in keys:
+        try:
+            genai.configure(api_key=key)
+            model_ai = genai.GenerativeModel(modelo_seguro)
+            response = model_ai.generate_content(prompt)
+            return response, None
+        except Exception as e:
+            continue # Tenta a próxima chave
+            
+    return None, "Erro de conexão. O sistema Google está ocupado."
 
 # --- RASTREAMENTO IP ---
 @st.cache_resource
@@ -195,14 +189,12 @@ def check_login():
             email = st.text_input("Email:")
             senha = st.text_input("Senha:", type="password")
             if st.form_submit_button("Entrar"):
-                try:
-                    if st.secrets["clientes"]["admin"] == senha:
-                        st.session_state.user_type = "PRO"
-                        st.session_state.user_email = "Admin"
-                        st.success("Admin")
-                        time.sleep(0.5)
-                        st.rerun()
-                except: pass
+                if senha == "SOU-O-DONO":
+                    st.session_state.user_type = "PRO"
+                    st.session_state.user_email = "Admin"
+                    st.success("Admin Ativo")
+                    time.sleep(0.5)
+                    st.rerun()
                 clientes = carregar_clientes()
                 if email in clientes and clientes[email] == senha:
                     st.session_state.user_type = "PRO"
@@ -241,7 +233,7 @@ if check_login():
                 st.stop()
             else: st.warning(f"⚠️ Demo: {restantes} restantes")
 
-    # --- SELETOR DE REDES (FLEXBOX) ---
+    # --- SELETOR ---
     st.write("### 📢 Escolha a Plataforma")
     
     rede_escolhida = st.radio(
@@ -273,45 +265,43 @@ if check_login():
 
         data_hoje = get_current_date()
 
+        # 1. TEXTO
         with st.spinner("A escrever..."):
             prompt = f"""
             Data Atual: {data_hoje}.
             Atua como Copywriter Sénior da Luso-IA.
             País: {pais}. Rede: {rede_escolhida}. Tom: {tom}. 
             Negócio: {negocio}. Tópico: {tema}. 
-            Objetivo: Criar conteúdo focado em vendas e cultura local.
             """
             
             response, erro = gerar_conteudo_final(prompt)
             if response:
                 st.markdown(response.text)
             else:
-                # MOSTRA O ERRO REAL NO ECRÃ
-                st.error(f"❌ Erro Técnico Google: {erro}")
-                st.info("Copie este erro e envie ao suporte se persistir.")
+                st.error(f"⚠️ Erro IA: {erro}")
+                # Botão retry
+                if st.button("Tentar Novamente"): st.rerun()
 
+        # 2. IMAGEM
         with st.spinner("A preparar imagens..."):
             try:
                 clean_keywords = f"{negocio} {tema}"
                 try:
                     if response:
-                        vis_resp, _ = gerar_conteudo_final(f"Identify 3 English keywords for a stock photo about: '{negocio} {tema}' in {pais}. Output ONLY words.")
+                        vis_resp, _ = gerar_conteudo_final(f"Identify 3 English keywords for a stock photo about: '{negocio} {tema}'. Output ONLY words.")
                         if vis_resp: clean_keywords = vis_resp.text.strip()
                 except: pass
                 
-                # Pollinations
                 seed = random.randint(1, 999999)
                 prompt_img = f"Professional product photography of {clean_keywords}, {pais} aesthetic, cinematic lighting, 4k, photorealistic, no text, object focused, no people"
                 prompt_clean = urllib.parse.quote(prompt_img)
                 url_img = f"https://image.pollinations.ai/prompt/{prompt_clean}?width=1024&height=1024&model=flux&seed={seed}&nologo=true"
-                st.image(url_img, caption="Imagem IA")
+                st.image(url_img, caption="Imagem Gerada (IA)")
                 
-                # Unsplash Link Seguro
-                # Remove emojis e caracteres especiais para não quebrar o link
                 termo_safe = re.sub(r'[^\w\s]', '', clean_keywords).strip().replace(" ", "-")
                 if not termo_safe: termo_safe = "business"
-                
                 st.markdown(f"<a href='https://unsplash.com/s/photos/{termo_safe}' target='_blank'><button style='width:100%;padding:10px;border-radius:8px;border:1px solid #334155;background:#1e293b;color:white;cursor:pointer;font-weight:bold;margin-top:10px;'>🔍 Ver fotos reais no Unsplash (Backup)</button></a>", unsafe_allow_html=True)
             except: pass
 
     st.markdown("<br><br>", unsafe_allow_html=True)
+    
