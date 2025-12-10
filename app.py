@@ -3,62 +3,145 @@ import google.generativeai as genai
 import pandas as pd
 import time
 import random
-from datetime import datetime
+import urllib.parse
+import streamlit.components.v1 as components
 from streamlit import runtime
 from streamlit.runtime.scriptrunner import get_script_run_ctx
-from google.api_core import exceptions
 
-# --- CONFIGURAÇÃO (LAYOUT LARGO PARA NÃO ESMAGAR) ---
+# --- CONFIGURAÇÃO ---
 st.set_page_config(
     page_title="Luso-IA", 
     page_icon="🇵🇹", 
-    layout="wide", 
+    layout="centered",
     initial_sidebar_state="collapsed"
 )
 
-# --- CSS DE LIMPEZA (REMOVER RODAPÉ) ---
+# --- JAVASCRIPT KILLER (PARA REMOVER RODAPÉ E CABEÇALHO À FORÇA) ---
+# Isto remove a barra branca chata de baixo e o menu de cima
+components.html("""
+    <script>
+        window.parent.document.querySelector('footer').style.display = 'none';
+        window.parent.document.querySelector('header').style.display = 'none';
+        window.parent.document.querySelector('.viewerBadge-container').style.display = 'none';
+    </script>
+""", height=0)
+
+# --- CSS DE DESIGN DE INTERFACE (UI) APPLE DARK ---
 st.markdown("""
     <style>
-        /* Fundo Preto */
-        .stApp { background-color: #000000; }
-        
-        /* Remover TUDO o que é rodapé e menu */
-        header {visibility: hidden;}
-        footer {visibility: hidden; display: none;}
-        #MainMenu {visibility: hidden; display: none;}
-        .stDeployButton {display: none;}
-        [data-testid="stDecoration"] {display: none;}
-        div[data-testid="stStatusWidget"] {display: none;}
-        
-        /* Inputs Legíveis */
+        /* 1. FUNDO PRETO ABSOLUTO */
+        .stApp {
+            background-color: #000000;
+        }
+
+        /* 2. TEXTOS E TÍTULOS (BRANCO E ELEGANTE) */
+        h1, h2, h3, p, label, .stMarkdown, div {
+            color: #ffffff !important;
+            font-family: -apple-system, BlinkMacSystemFont, sans-serif !important;
+        }
+
+        /* 3. INPUTS (BRANCO PURO PARA CONTRASTE) */
         .stTextInput input, .stTextArea textarea, .stSelectbox div[data-baseweb="select"] > div {
             background-color: #ffffff !important;
             color: #000000 !important;
-            border: 2px solid #555 !important;
-            border-radius: 8px !important;
+            border: none !important;
+            border-radius: 12px !important;
+            padding: 15px !important;
+            font-size: 16px !important;
+            font-weight: 500 !important;
+        }
+        /* Dropdown menu items */
+        ul[data-testid="stSelectboxVirtualDropdown"] li {
+            color: black !important;
+            background: white !important;
+        }
+
+        /* 4. GRELHA DE REDES SOCIAIS (CARTÕES REAIS) */
+        div[role="radiogroup"] {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 12px;
         }
         
-        /* Texto Branco */
-        h1, h2, h3, p, label, div, span { color: #e2e8f0 !important; }
+        /* ESCONDER O TEXTO ORIGINAL E BOLINHA DO RÁDIO */
+        div[role="radiogroup"] label > div:first-child { display: none; }
+        div[role="radiogroup"] label p { display: none; }
+
+        /* O CARTÃO (BODY) */
+        div[role="radiogroup"] label {
+            background-color: #1c1c1e !important; /* Cinza Apple */
+            border: 1px solid #333 !important;
+            border-radius: 18px !important;
+            height: 90px !important;
+            width: 100% !important;
+            margin: 0 !important;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+        }
         
-        /* Botões de Rede (Estilo Botão Normal) */
-        .stButton button {
-            width: 100%;
-            border-radius: 8px;
-            font-weight: bold;
-            background-color: #1f2937;
-            color: white;
-            border: 1px solid #374151;
-            transition: 0.2s;
+        /* A IMAGEM DO ÍCONE (INJETADA NO MEIO) */
+        div[role="radiogroup"] label::after {
+            content: "";
+            display: block;
+            width: 45px;
+            height: 45px;
+            background-size: contain;
+            background-repeat: no-repeat;
+            background-position: center;
         }
-        .stButton button:hover {
-            border-color: #3b82f6;
-            color: #3b82f6;
+
+        /* --- MAPEAMENTO DOS ÍCONES (ORDEM EXATA) --- */
+        /* 1. Instagram */
+        div[role="radiogroup"] label:nth-child(1)::after { background-image: url('https://cdn-icons-png.flaticon.com/128/2111/2111463.png'); }
+        /* 2. LinkedIn */
+        div[role="radiogroup"] label:nth-child(2)::after { background-image: url('https://cdn-icons-png.flaticon.com/128/174/174857.png'); }
+        /* 3. X (Twitter) */
+        div[role="radiogroup"] label:nth-child(3)::after { background-image: url('https://cdn-icons-png.flaticon.com/128/5969/5969020.png'); width: 35px; }
+        /* 4. TikTok */
+        div[role="radiogroup"] label:nth-child(4)::after { background-image: url('https://cdn-icons-png.flaticon.com/128/3046/3046121.png'); }
+        /* 5. YouTube */
+        div[role="radiogroup"] label:nth-child(5)::after { background-image: url('https://cdn-icons-png.flaticon.com/128/1384/1384060.png'); }
+        /* 6. Facebook */
+        div[role="radiogroup"] label:nth-child(6)::after { background-image: url('https://cdn-icons-png.flaticon.com/128/5968/5968764.png'); }
+        /* 7. WhatsApp */
+        div[role="radiogroup"] label:nth-child(7)::after { background-image: url('https://cdn-icons-png.flaticon.com/128/733/733585.png'); }
+        /* 8. Blog */
+        div[role="radiogroup"] label:nth-child(8)::after { background-image: url('https://cdn-icons-png.flaticon.com/128/4922/4922073.png'); }
+
+        /* INTERAÇÃO: HOVER */
+        div[role="radiogroup"] label:hover {
+            transform: translateY(-3px);
+            background-color: #2c2c2e !important;
+            border-color: #555 !important;
         }
-        /* Botão selecionado (Simulação) */
-        .stButton button:active {
-            background-color: #3b82f6;
-            color: white;
+
+        /* INTERAÇÃO: SELECIONADO (BORDA AZUL + GLOW) */
+        div[role="radiogroup"] label[data-checked="true"] {
+            background-color: rgba(10, 132, 255, 0.15) !important;
+            border: 2px solid #0A84FF !important;
+            box-shadow: 0 0 20px rgba(10, 132, 255, 0.4);
+        }
+
+        /* 5. BOTÃO GERAR (OURO DESTAQUE) */
+        .stButton button { 
+            width: 100%; border-radius: 14px; font-weight: 800; font-size: 1.2rem;
+            background: linear-gradient(90deg, #F59E0B, #D97706); 
+            color: black !important; border: none; padding: 1.2rem;
+            text-transform: uppercase; letter-spacing: 1px;
+            margin-top: 15px;
+            box-shadow: 0 4px 15px rgba(245, 158, 11, 0.3);
+        }
+        .stButton button:hover { transform: scale(1.02); filter: brightness(1.1); }
+        
+        /* Ajustes Mobile */
+        @media (max-width: 600px) {
+            div[role="radiogroup"] { grid-template-columns: repeat(4, 1fr); } /* Tenta manter 4 no mobile */
+            div[role="radiogroup"] label { height: 70px !important; }
+            div[role="radiogroup"] label::after { width: 35px; height: 35px; }
         }
     </style>
 """, unsafe_allow_html=True)
@@ -67,7 +150,7 @@ st.markdown("""
 LINK_DA_BASE_DE_DADOS = "https://docs.google.com/spreadsheets/d/e/2PACX-1vT_xyKHdsk9og2mRKE5uZBKcANNFtvx8wuUhR3a7gV-TFlZeSuU2wzJB_SjfkUKKIqVhh3LcaRr8Wn3/pub?gid=0&single=true&output=csv"
 LINK_TALLY = "https://tally.so/r/81qLVx"
 
-# --- MOTOR DE IA "OLD RELIABLE" ---
+# --- MOTOR DE IA (GEMINI PRO - ESTABILIDADE MÁXIMA) ---
 def gerar_conteudo_final(prompt):
     keys = []
     if "GOOGLE_KEYS" in st.secrets: keys = st.secrets["GOOGLE_KEYS"]
@@ -76,17 +159,19 @@ def gerar_conteudo_final(prompt):
     if not keys: return None, "Chave API não configurada."
     random.shuffle(keys)
     
-    # USAR APENAS GEMINI-PRO (UNIVERSAL)
+    # Usar apenas o modelo PRO para evitar 404
+    modelo_seguro = "gemini-pro"
+    
     for key in keys:
         try:
             genai.configure(api_key=key)
-            model_ai = genai.GenerativeModel("gemini-pro")
+            model_ai = genai.GenerativeModel(modelo_seguro)
             response = model_ai.generate_content(prompt)
             return response, None
         except Exception as e:
             continue
             
-    return None, "Erro de conexão. Tente novamente."
+    return None, "Todos os serviços Google ocupados. Tente novamente."
 
 # --- RASTREAMENTO IP ---
 @st.cache_resource
@@ -118,19 +203,17 @@ def carregar_clientes():
         return {}
     except: return {}
 
-# --- GESTÃO DE ESTADO (Para os botões) ---
-if "rede_selecionada" not in st.session_state:
-    st.session_state.rede_selecionada = "Instagram"
-
-def set_rede(nome):
-    st.session_state.rede_selecionada = nome
+def get_current_date():
+    meses = {1:'Janeiro', 2:'Fevereiro', 3:'Março', 4:'Abril', 5:'Maio', 6:'Junho', 7:'Julho', 8:'Agosto', 9:'Setembro', 10:'Outubro', 11:'Novembro', 12:'Dezembro'}
+    h = datetime.now()
+    return f"{h.day} de {meses[h.month]} de {h.year}"
 
 # --- LOGIN ---
 def check_login():
     if "user_type" not in st.session_state: st.session_state.user_type = None
     if st.session_state.user_type: return True
 
-    try: st.image("logo.png", width=150) 
+    try: st.image("logo.png", width=160) 
     except: pass
     
     st.markdown("### 🔒 Login Luso-IA")
@@ -141,14 +224,12 @@ def check_login():
             email = st.text_input("Email:")
             senha = st.text_input("Senha:", type="password")
             if st.form_submit_button("Entrar"):
-                try:
-                    if st.secrets["clientes"]["admin"] == senha:
-                        st.session_state.user_type = "PRO"
-                        st.session_state.user_email = "Admin"
-                        st.success("Admin Ativo")
-                        time.sleep(0.5)
-                        st.rerun()
-                except: pass
+                if senha == "SOU-O-DONO":
+                    st.session_state.user_type = "PRO"
+                    st.session_state.user_email = "Admin"
+                    st.success("Admin")
+                    time.sleep(0.5)
+                    st.rerun()
                 clientes = carregar_clientes()
                 if email in clientes and clientes[email] == senha:
                     st.session_state.user_type = "PRO"
@@ -171,62 +252,44 @@ def check_login():
 
 # --- APP ---
 if check_login():
-    # Header simples
-    try: st.image("logo.png", width=120)
-    except: st.write("🌍 Luso-IA")
-    
-    if st.session_state.user_type != "PRO":
-        usos_ip = usage_tracker.get(user_ip, 0)
-        restantes = 3 - usos_ip
-        if restantes <= 0:
-            st.error("Demonstração terminada.")
-            st.markdown(f"<a href='{LINK_TALLY}' target='_blank' style='display:block;text-align:center;background:#dc2626;color:white;padding:15px;border-radius:8px;text-decoration:none;font-size:1.1em;'>🔓 Desbloquear</a>", unsafe_allow_html=True)
-            st.stop()
+    col1, col2 = st.columns([1, 4])
+    with col1:
+        try: st.image("logo.png", width=100)
+        except: st.write("🌍")
+    with col2:
+        st.title("Luso-IA")
+        if st.session_state.user_type == "PRO": st.success("✅ Modo PRO Ativo")
         else:
-            st.caption(f"⚠️ Modo Demo: {restantes} restantes")
+            usos_ip = usage_tracker.get(user_ip, 0)
+            restantes = 3 - usos_ip
+            if restantes <= 0:
+                st.error("Demonstração terminada.")
+                st.markdown(f"<a href='{LINK_TALLY}' target='_blank' style='display:block;text-align:center;background:#dc2626;color:white;padding:15px;border-radius:8px;text-decoration:none;font-size:1.1em;'>🔓 Desbloquear</a>", unsafe_allow_html=True)
+                st.stop()
+            else: st.warning(f"⚠️ Demo: {restantes} restantes")
 
-    # --- SELETOR DE REDES (BOTÕES REAIS) ---
+    # --- SELETOR DE REDES (RÁDIO CSS PURO) ---
     st.write("### 📢 Escolha a Plataforma")
     
-    # Grelha de botões manuais (Indestrutível)
-    c1, c2, c3, c4 = st.columns(4)
-    with c1: 
-        if st.button("📸 Insta", use_container_width=True): set_rede("Instagram")
-    with c2: 
-        if st.button("💼 Linked", use_container_width=True): set_rede("LinkedIn")
-    with c3: 
-        if st.button("🎵 TikTok", use_container_width=True): set_rede("TikTok")
-    with c4: 
-        if st.button("📘 Face", use_container_width=True): set_rede("Facebook")
-        
-    c5, c6, c7, c8 = st.columns(4)
-    with c5: 
-        if st.button("▶️ Tube", use_container_width=True): set_rede("YouTube")
-    with c6: 
-        if st.button("🐦 Twitter", use_container_width=True): set_rede("Twitter")
-    with c7: 
-        if st.button("💬 Whats", use_container_width=True): set_rede("WhatsApp")
-    with c8: 
-        if st.button("📝 Blog", use_container_width=True): set_rede("Blog")
+    # Ordem EXATA para o CSS mapear os ícones
+    rede_escolhida = st.radio(
+        "Selecione:",
+        ["Instagram", "LinkedIn", "X (Twitter)", "TikTok", "YouTube", "Facebook", "WhatsApp", "Blog"],
+        horizontal=True,
+        label_visibility="collapsed"
+    )
 
-    # Mostra o que está selecionado
-    st.info(f"✅ Rede Selecionada: **{st.session_state.rede_selecionada}**")
-
-    # --- FORMULÁRIO ---
-    st.markdown("---")
     with st.form("gerador"):
-        c_pais, c_tom = st.columns(2)
-        with c_pais: 
+        st.write("### ⚙️ Detalhes")
+        col_a, col_b = st.columns(2)
+        with col_a: 
             pais = st.selectbox("País", ["🇵🇹 Portugal", "🇧🇷 Brasil", "🇦🇴 Angola", "🇲🇿 Moçambique", "🇨🇻 Cabo Verde", "🇬🇼 Guiné", "🇸🇹 São Tomé", "🇹🇱 Timor"])
-        with c_tom: 
-            tom = st.selectbox("Tom", ["Profissional", "Divertido", "Vendas", "Storytelling", "Urgente"])
+        with col_b: 
+            tom = st.selectbox("Tom", ["Profissional", "Divertido", "Vendas/Promoção", "Storytelling", "Urgente", "Inspirador", "Institucional"])
             
         negocio = st.text_input("Negócio:", placeholder="Ex: Café Central")
         tema = st.text_area("Tópico:", placeholder="Ex: Promoção de pequeno-almoço")
-        
-        # Botão de Gerar Grande e Colorido
-        st.markdown("""<style>div[data-testid="stFormSubmitButton"] button {background: #f59e0b !important; color: black !important; border: none;}</style>""", unsafe_allow_html=True)
-        btn = st.form_submit_button("✨ CRIAR CONTEÚDO AGORA")
+        btn = st.form_submit_button("✨ CRIAR CONTEÚDO")
 
     if btn and negocio:
         if st.session_state.user_type == "DEMO":
@@ -236,28 +299,44 @@ if check_login():
                 if usage_tracker[user_ip] >= 3: time.sleep(1)
             else: st.rerun()
 
-        # GERAÇÃO
-        with st.spinner("A criar magia..."):
+        data_hoje = get_current_date()
+
+        # 1. TEXTO
+        with st.spinner("A escrever..."):
             prompt = f"""
-            Atua como Copywriter Sénior. 
-            País: {pais}. Rede: {st.session_state.rede_selecionada}. Tom: {tom}. 
+            Data Atual: {data_hoje}.
+            Atua como Copywriter Sénior da Luso-IA.
+            País: {pais}. Rede: {rede_escolhida}. Tom: {tom}. 
             Negócio: {negocio}. Tópico: {tema}. 
+            Objetivo: Criar conteúdo focado em vendas e cultura local.
             """
             
             response, erro = gerar_conteudo_final(prompt)
             if response:
-                st.markdown("### 📝 O seu texto:")
                 st.markdown(response.text)
-                st.markdown("---")
             else:
                 st.error(f"⚠️ Erro IA: {erro}")
+                st.button("Tentar Novamente", on_click=st.rerun)
 
-            # IMAGEM (POLLINATIONS SIMPLES)
+        # 2. IMAGEM
+        with st.spinner("A preparar imagens..."):
             try:
-                clean_keywords = f"{negocio} {tema} {pais}"
-                clean_keywords = urllib.parse.quote(clean_keywords)
-                url_img = f"https://image.pollinations.ai/prompt/professional%20photo%20of%20{clean_keywords}?width=1024&height=1024&model=flux&nologo=true"
-                st.image(url_img, caption="Sugestão Visual")
+                clean_keywords = f"{negocio} {tema}"
+                try:
+                    if response:
+                        vis_resp, _ = gerar_conteudo_final(f"Identify 3 English keywords for a stock photo about: '{negocio} {tema}' in {pais}. Output ONLY the 3 words.")
+                        if vis_resp: clean_keywords = vis_resp.text.strip()
+                except: pass
+                
+                seed = random.randint(1, 999999)
+                prompt_img = f"Professional product photography of {clean_keywords}, {pais} aesthetic, cinematic lighting, 4k, photorealistic, no text, object focused, no people"
+                prompt_clean = urllib.parse.quote(prompt_img)
+                url_img = f"https://image.pollinations.ai/prompt/{prompt_clean}?width=1024&height=1024&model=flux&seed={seed}&nologo=true"
+                st.image(url_img, caption="Imagem Gerada (IA)")
+                
+                termo_safe = re.sub(r'[^\w\s]', '', clean_keywords).strip().replace(" ", "-")
+                if not termo_safe: termo_safe = "business"
+                st.markdown(f"<a href='https://unsplash.com/s/photos/{termo_safe}' target='_blank'><button style='width:100%;padding:10px;border-radius:8px;border:1px solid #334155;background:#1e293b;color:white;cursor:pointer;font-weight:bold;margin-top:10px;'>🔍 Ver fotos reais no Unsplash (Backup)</button></a>", unsafe_allow_html=True)
             except: pass
 
     st.markdown("<br><br>", unsafe_allow_html=True)
