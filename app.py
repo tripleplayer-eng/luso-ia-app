@@ -1,11 +1,9 @@
 import streamlit as st
 import google.generativeai as genai
 import pandas as pd
-from streamlit_image_select import image_select
 import time
 import random
 import urllib.parse
-import re
 from datetime import datetime
 from streamlit import runtime
 from streamlit.runtime.scriptrunner import get_script_run_ctx
@@ -19,54 +17,81 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# --- CSS DARK MODE & DESIGN MODERNO ---
+# --- CSS PREMIUM (Design Apple Dark) ---
 st.markdown("""
     <style>
-        /* 1. FUNDO ESCURO (Igual ao Site) */
-        [data-testid="stAppViewContainer"] {
-            background-color: #020617;
-            background-image: radial-gradient(rgba(255,255,255,0.05) 1px, transparent 1px);
-            background-size: 30px 30px;
-        }
-        
-        /* 2. TEXTOS */
-        h1, h2, h3, p, label, .stMarkdown {
-            color: #e2e8f0 !important;
-            font-family: 'Source Sans Pro', sans-serif;
-        }
-        
-        /* 3. INPUTS E CAIXAS (Estilo Glass Dark) */
-        .stTextInput input, .stTextArea textarea, .stSelectbox div[data-baseweb="select"] {
-            background-color: #0f172a !important;
-            color: white !important;
-            border: 1px solid #1e293b !important;
+        /* 1. INPUTS CLAROS (Para facilitar a escrita) */
+        .stTextInput input, .stTextArea textarea, .stSelectbox div[data-baseweb="select"] > div {
+            background-color: #f8fafc !important; /* Cinza muito claro */
+            color: #0f172a !important; /* Texto Escuro */
+            border: 1px solid #cbd5e1 !important;
             border-radius: 10px !important;
         }
+        /* Foco no input */
         .stTextInput input:focus, .stTextArea textarea:focus {
             border-color: #2563eb !important;
-            box-shadow: 0 0 0 1px #2563eb !important;
+            box-shadow: 0 0 0 2px rgba(37,99,235,0.2) !important;
         }
-        
-        /* 4. REMOVER ELEMENTOS STREAMLIT */
+        /* Labels (Títulos dos campos) em branco para contrastar com o fundo preto */
+        .stTextInput label, .stTextArea label, .stSelectbox label {
+            color: #e2e8f0 !important;
+            font-weight: 600;
+        }
+
+        /* 2. ÍCONES FLUTUANTES (Estilo Cartão) */
+        /* Remove as bolinhas dos radios */
+        div[role="radiogroup"] > label > div:first-child {
+            display: none;
+        }
+        div[role="radiogroup"] {
+            gap: 12px;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        div[role="radiogroup"] label {
+            background-color: rgba(255, 255, 255, 0.05); /* Fundo vidro escuro */
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 15px 20px;
+            border-radius: 16px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            color: white !important;
+            text-align: center;
+            min-width: 100px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+        /* Efeito Hover (Levitar) */
+        div[role="radiogroup"] label:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+            transform: translateY(-5px);
+            border-color: #2563eb;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.3);
+        }
+        /* Item Selecionado */
+        div[role="radiogroup"] label[data-checked="true"] {
+            background: linear-gradient(135deg, #2563eb, #4f46e5);
+            border-color: #4f46e5;
+            box-shadow: 0 0 15px rgba(37, 99, 235, 0.5);
+            font-weight: bold;
+        }
+
+        /* 3. LIMPEZA GERAL */
         header[data-testid="stHeader"] {visibility: hidden; height: 0px;}
         #MainMenu {visibility: hidden; display: none;}
         footer {visibility: hidden; display: none;}
         .block-container {padding-top: 2rem !important; padding-bottom: 5rem !important;}
         
-        /* 5. BOTÕES VIBRANTES */
+        /* 4. BOTÃO DE AÇÃO */
         .stButton button { 
-            width: 100%; border-radius: 12px; font-weight: 600; 
+            width: 100%; border-radius: 12px; font-weight: 700; font-size: 1.1rem;
             background: linear-gradient(90deg, #2563eb, #4f46e5); color: white; border: none; padding: 0.8rem;
-            box-shadow: 0 4px 15px rgba(37, 99, 235, 0.3); transition: all 0.3s;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1); transition: all 0.3s;
         }
-        .stButton button:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(37, 99, 235, 0.5); }
-
-        /* 6. MENSAGENS DE SUCESSO/ERRO */
-        .stSuccess, .stInfo, .stWarning, .stError {
-            background-color: #0f172a !important;
-            color: white !important;
-            border: 1px solid #334155 !important;
-        }
+        .stButton button:hover { transform: scale(1.02); box-shadow: 0 6px 12px rgba(37, 99, 235, 0.4); }
     </style>
 """, unsafe_allow_html=True)
 
@@ -74,9 +99,10 @@ st.markdown("""
 LINK_DA_BASE_DE_DADOS = "https://docs.google.com/spreadsheets/d/e/2PACX-1vT_xyKHdsk9og2mRKE5uZBKcANNFtvx8wuUhR3a7gV-TFlZeSuU2wzJB_SjfkUKKIqVhh3LcaRr8Wn3/pub?gid=0&single=true&output=csv"
 LINK_TALLY = "https://tally.so/r/81qLVx"
 
-# --- FUNÇÕES DE SEGURANÇA E MOTOR ---
+# --- MOTOR DE IA FIXO ---
 MODELO_ESTAVEL = "gemini-1.5-flash"
 
+# --- RASTREAMENTO IP ---
 @st.cache_resource
 def get_usage_tracker(): return {}
 
@@ -93,23 +119,6 @@ def get_remote_ip():
 
 usage_tracker = get_usage_tracker()
 user_ip = get_remote_ip()
-
-@st.cache_data(ttl=60)
-def carregar_clientes():
-    try:
-        df = pd.read_csv(LINK_DA_BASE_DE_DADOS)
-        df.columns = df.columns.str.strip()
-        if 'Email' in df.columns and 'Senha' in df.columns:
-            df['Email'] = df['Email'].astype(str).str.strip()
-            df['Senha'] = df['Senha'].astype(str).str.strip()
-            return dict(zip(df.Email, df.Senha))
-        return {}
-    except: return {}
-
-def get_current_date():
-    meses = {1:'Janeiro', 2:'Fevereiro', 3:'Março', 4:'Abril', 5:'Maio', 6:'Junho', 7:'Julho', 8:'Agosto', 9:'Setembro', 10:'Outubro', 11:'Novembro', 12:'Dezembro'}
-    hoje = datetime.now()
-    return f"{hoje.day} de {meses[hoje.month]} de {hoje.year}"
 
 # --- FUNÇÃO DE ROTAÇÃO DE CHAVES ---
 def gerar_conteudo_seguro(prompt):
@@ -132,6 +141,19 @@ def gerar_conteudo_seguro(prompt):
             continue
     return None
 
+# --- CARREGAR CLIENTES ---
+@st.cache_data(ttl=60)
+def carregar_clientes():
+    try:
+        df = pd.read_csv(LINK_DA_BASE_DE_DADOS)
+        df.columns = df.columns.str.strip()
+        if 'Email' in df.columns and 'Senha' in df.columns:
+            df['Email'] = df['Email'].astype(str).str.strip()
+            df['Senha'] = df['Senha'].astype(str).str.strip()
+            return dict(zip(df.Email, df.Senha))
+        return {}
+    except: return {}
+
 # --- LOGIN ---
 def check_login():
     if "user_type" not in st.session_state: st.session_state.user_type = None
@@ -142,19 +164,22 @@ def check_login():
     
     st.markdown("### 🔒 Login Luso-IA")
     
-    tab1, tab2 = st.tabs(["🔑 Entrar", "🎁 Testar"])
+    tab1, tab2 = st.tabs(["🔑 Entrar (Pro)", "🎁 Testar (Grátis)"])
     
     with tab1:
         with st.form("login_form"):
             email = st.text_input("Email:")
             senha = st.text_input("Senha:", type="password")
             if st.form_submit_button("Entrar"):
-                try:
-                    if st.secrets["clientes"]["admin"] == senha:
-                        st.session_state.user_type = "PRO"
-                        st.session_state.user_email = "Admin"
-                        st.rerun()
-                except: pass
+                # --- LÓGICA DE ADMIN (AQUI ESTÁ O TRUQUE) ---
+                if senha == "SOU-O-DONO":
+                    st.session_state.user_type = "PRO"
+                    st.session_state.user_email = "Admin"
+                    st.success("⚡ Modo Administrador Ativado!")
+                    time.sleep(0.5)
+                    st.rerun()
+                
+                # Login Normal
                 clientes = carregar_clientes()
                 if email in clientes and clientes[email] == senha:
                     st.session_state.user_type = "PRO"
@@ -175,7 +200,7 @@ def check_login():
                 st.rerun()
     return False
 
-# --- APP ---
+# --- APP PRINCIPAL ---
 if check_login():
     col1, col2 = st.columns([1, 4])
     with col1:
@@ -194,31 +219,25 @@ if check_login():
             else: st.warning(f"⚠️ Demo: {restantes} restantes")
 
     try:
-        # Config inicial simples para garantir que não cracha
-        if "GOOGLE_KEYS" in st.secrets: genai.configure(api_key=st.secrets["GOOGLE_KEYS"][0])
-        elif "GOOGLE_API_KEY" in st.secrets: genai.configure(api_key=st.secrets["GOOGLE_API_KEY"])
-    except:
-        st.error("Erro: API Key em falta.")
-        st.stop()
+        # Check rápido de chaves
+        if "GOOGLE_KEYS" not in st.secrets and "GOOGLE_API_KEY" not in st.secrets:
+             st.error("Erro: API Key em falta.")
+             st.stop()
+    except: pass
 
-    st.write("### Publicar onde?")
-    rede_selecionada = image_select(
-        label="",
-        images=[
-            "https://cdn-icons-png.flaticon.com/512/2111/2111463.png", 
-            "https://cdn-icons-png.flaticon.com/512/174/174857.png", 
-            "https://cdn-icons-png.flaticon.com/512/5968/5968764.png",
-            "https://cdn-icons-png.flaticon.com/512/3046/3046121.png",
-            "https://cdn-icons-png.flaticon.com/512/1384/1384060.png",
-            "https://cdn-icons-png.flaticon.com/512/5969/5969020.png",
-            "https://cdn-icons-png.flaticon.com/512/4922/4922073.png",
-            "https://cdn-icons-png.flaticon.com/512/733/733585.png"
-        ],
-        captions=["Instagram", "LinkedIn", "Facebook", "TikTok", "YouTube", "X (Twitter)", "Blog", "WhatsApp"],
-        index=0, use_container_width=False
+    # --- SELETOR DE REDES FLUTUANTES (NOVO DESIGN) ---
+    st.write("### 📢 Publicar onde?")
+    
+    # Emojis funcionam melhor que imagens externas para carregar rápido e sem fundo branco
+    rede_escolhida = st.radio(
+        "Selecione:",
+        ["📸 Instagram", "💼 LinkedIn", "🎵 TikTok", "📘 Facebook", "▶️ YouTube", "🐦 Twitter", "💬 WhatsApp", "📝 Blog"],
+        horizontal=True,
+        label_visibility="collapsed"
     )
 
     with st.form("gerador"):
+        st.write("### ⚙️ Configuração")
         col_a, col_b = st.columns(2)
         with col_a: 
             pais = st.selectbox("País", ["🇵🇹 Portugal", "🇧🇷 Brasil", "🇦🇴 Angola", "🇲🇿 Moçambique", "🇨🇻 Cabo Verde", "🇬🇼 Guiné", "🇸🇹 São Tomé", "🇹🇱 Timor"])
@@ -237,69 +256,59 @@ if check_login():
                 if usage_tracker[user_ip] >= 3: time.sleep(1)
             else: st.rerun()
 
-        rede_nome = "Rede Social"
-        # ... (lógica de ícones simplificada para poupar espaço)
-        if "2111463" in rede_selecionada: rede_nome = "Instagram"
-        elif "174857" in rede_selecionada: rede_nome = "LinkedIn"
-        elif "5968764" in rede_selecionada: rede_nome = "Facebook"
-        elif "3046121" in rede_selecionada: rede_nome = "TikTok"
-        elif "1384060" in rede_selecionada: rede_nome = "YouTube"
-        elif "5969020" in rede_selecionada: rede_nome = "Twitter"
-        elif "4922073" in rede_selecionada: rede_nome = "Blog"
-        elif "733585" in rede_selecionada: rede_nome = "WhatsApp"
-
-        data_hoje = get_current_date()
+        # Limpeza do nome da rede (tirar emoji)
+        rede_nome = rede_escolhida.split(" ")[1] 
+        
+        # Obter data atual
+        meses = {1:'Janeiro', 2:'Fevereiro', 3:'Março', 4:'Abril', 5:'Maio', 6:'Junho', 7:'Julho', 8:'Agosto', 9:'Setembro', 10:'Outubro', 11:'Novembro', 12:'Dezembro'}
+        h = datetime.now()
+        data_hoje = f"{h.day} de {meses[h.month]} de {h.year}"
 
         # 1. TEXTO
         with st.spinner("A escrever..."):
             prompt = f"""
             Data Atual: {data_hoje}.
-            Atua como Copywriter Sénior. País: {pais}. Rede: {rede_nome}. Tom: {tom}. 
+            Atua como Copywriter Sénior da Luso-IA.
+            País: {pais}. Rede: {rede_nome}. Tom: {tom}. 
             Negócio: {negocio}. Tópico: {tema}. 
             Objetivo: Criar conteúdo focado em vendas e cultura local.
             """
-            
             response = gerar_conteudo_seguro(prompt)
             if response:
                 st.markdown(response.text)
             else:
-                st.error("⚠️ O sistema está a receber muitos pedidos. Tente novamente em 10 segundos.")
+                st.error("⚠️ Erro de ligação. Tente novamente.")
 
         # 2. IMAGEM
         with st.spinner("A preparar imagens..."):
             try:
-                # Prompt Visual
-                prompt_visual = f"Identify 3 English keywords for a stock photo about: '{negocio} {tema}' in {pais}. Output ONLY the 3 words. No intro."
-                visual_response = gerar_conteudo_seguro(prompt_visual)
+                # Prompt visual
+                clean_keywords = f"{negocio} {tema}"
+                try:
+                    if response:
+                        vis_resp = gerar_conteudo_seguro(f"Identify 3 English keywords for a stock photo about: '{negocio} {tema}' in {pais}. Output ONLY the 3 words.")
+                        if vis_resp: clean_keywords = vis_resp.text.strip()
+                except: pass
                 
-                clean_keywords = ""
-                if visual_response:
-                    clean_keywords = visual_response.text.strip()
-                
-                # Fallback se a IA falhar
-                if not clean_keywords: clean_keywords = f"{negocio} business"
-
                 # A. Imagem IA (Pollinations)
                 seed = random.randint(1, 999999)
                 prompt_img = f"Professional product photography of {clean_keywords}, {pais} aesthetic, cinematic lighting, 4k, photorealistic, no text, object focused, no people"
                 prompt_clean = urllib.parse.quote(prompt_img)
                 url_img = f"https://image.pollinations.ai/prompt/{prompt_clean}?width=1024&height=1024&model=flux&seed={seed}&nologo=true"
+                
                 st.image(url_img, caption="Imagem Gerada (IA)")
                 
-                # B. Link Unsplash (LIMPEZA AGRESSIVA)
-                # Remove tudo o que não for letra ou número
-                termo_super_limpo = re.sub(r'[^a-zA-Z0-9\s]', '', clean_keywords)
-                # Substitui espaços por hífens (o Unsplash gosta disto)
-                termo_url = termo_super_limpo.strip().replace(" ", "-")
+                # B. Link Unsplash
+                termo_safe = re.sub(r'[^\w\s]', '', clean_keywords).strip().replace(" ", "-")
+                if not termo_safe: termo_safe = "business"
                 
                 st.markdown(f"""
-                    <a href="https://unsplash.com/s/photos/{termo_url}" target="_blank" style="text-decoration:none;">
+                    <a href="https://unsplash.com/s/photos/{termo_safe}" target="_blank" style="text-decoration:none;">
                         <button style="width:100%;padding:10px;border-radius:8px;border:1px solid #334155;background:#1e293b;color:white;cursor:pointer;font-weight:bold;margin-top:10px;">
                             🔍 Ver fotos reais no Unsplash (Backup)
                         </button>
                     </a>
                 """, unsafe_allow_html=True)
-
             except: pass
 
     st.markdown("<br><br>", unsafe_allow_html=True)
