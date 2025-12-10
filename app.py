@@ -17,27 +17,30 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# --- CSS DE CORREÇÃO VISUAL (Tamanho Fixo + Remoção de Rodapé) ---
+# --- CSS DE RESGATE (DESIGN FIXED) ---
 st.markdown("""
     <style>
-        /* 1. FUNDO PRETO */
+        /* 1. FUNDO GERAL */
         .stApp { background-color: #000000; }
-        
-        /* 2. REMOVER RODAPÉ E BARRA DO STREAMLIT (Código Reforçado) */
-        header {visibility: hidden; height: 0px;}
-        footer {visibility: hidden; display: none;}
+        h1, h2, h3, p, label, div, span { color: #e2e8f0 !important; }
+
+        /* 2. REMOVER RODAPÉ (NUCLEAR) */
+        header {visibility: hidden;}
+        footer {visibility: hidden; display: none !important; height: 0px;}
         #MainMenu {visibility: hidden; display: none;}
-        .stDeployButton {display: none;}
-        [data-testid="stDecoration"] {display: none;}
-        [data-testid="stStatusWidget"] {display: none;}
-        /* Remove a barra branca de baixo */
         .viewerBadge-container {display: none !important;} 
+        iframe[title="streamlit_image_select.image_select_component"] { display: none; } /* Se sobrar lixo antigo */
         
-        /* 3. INPUTS (Legibilidade) */
+        .block-container {
+            padding-top: 1rem !important; 
+            padding-bottom: 0rem !important;
+        }
+
+        /* 3. INPUTS */
         .stTextInput input, .stTextArea textarea, .stSelectbox div[data-baseweb="select"] > div {
             background-color: #ffffff !important;
             color: #000000 !important;
-            border: 1px solid #333 !important;
+            border: 1px solid #555 !important;
             border-radius: 8px !important;
             font-weight: 600 !important;
         }
@@ -45,79 +48,73 @@ st.markdown("""
             background-color: #ffffff !important;
             color: #000000 !important;
         }
-        h1, h2, h3, p, label, span, div { color: #e2e8f0 !important; }
 
-        /* 4. GRELHA DE REDES SOCIAIS (CORREÇÃO DO ESMAGAMENTO) */
+        /* 4. GRELHA DE ÍCONES (CORRIGIDA) */
         div[role="radiogroup"] {
-            display: flex;
-            flex-wrap: wrap;
-            justify-content: center;
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
             gap: 10px;
+            width: 100%;
         }
-        
-        /* Esconde a bolinha */
         div[role="radiogroup"] label > div:first-child { display: none; }
 
-        /* ESTILO DO CARTÃO - FORÇAR LARGURA MÍNIMA */
+        /* ESTILO DO CARTÃO */
         div[role="radiogroup"] label {
             background-color: #111111 !important;
             border: 1px solid #333 !important;
             border-radius: 12px !important;
-            width: 75px !important;       /* Largura Fixa */
-            height: 75px !important;      /* Altura Fixa */
-            min-width: 75px !important;   /* Impede esmagamento */
-            display: flex !important;
-            flex-direction: column;
+            height: 80px !important;
+            width: 100% !important;
+            cursor: pointer;
+            margin: 0 !important;
+            display: flex;
             align-items: center;
             justify-content: center;
-            cursor: pointer;
-            transition: all 0.2s;
-            margin: 0 !important;
-            /* Ícone no centro */
+            /* Configuração da Imagem de Fundo */
             background-repeat: no-repeat;
             background-position: center;
-            background-size: 40px; 
-            opacity: 0.7;
+            background-size: 45px; 
+            opacity: 0.5; /* Inativo = Meio transparente */
+            transition: all 0.2s;
         }
 
-        /* TEXTO DO RÁDIO (Esconder texto para mostrar só imagem) */
-        div[role="radiogroup"] label p {
-            display: none !important;
-        }
+        /* TEXTO DO RÁDIO (ESCONDIDO) */
+        div[role="radiogroup"] label p { display: none !important; }
 
-        /* --- ÍCONES (ORDEM EXATA) --- */
+        /* --- ÍCONES (ORDEM CORRETA: INSTA, LINK, X, TIKTOK, YOUTUBE, FACE, WHATS, BLOG) --- */
         div[role="radiogroup"] label:nth-child(1) { background-image: url('https://cdn-icons-png.flaticon.com/128/3955/3955024.png'); } /* Insta */
         div[role="radiogroup"] label:nth-child(2) { background-image: url('https://cdn-icons-png.flaticon.com/128/145/145807.png'); } /* LinkedIn */
-        div[role="radiogroup"] label:nth-child(3) { background-image: url('https://cdn-icons-png.flaticon.com/128/3670/3670151.png'); background-size: 35px !important; } /* X */
-        div[role="radiogroup"] label:nth-child(4) { background-image: url('https://cdn-icons-png.flaticon.com/128/3046/3046121.png'); background-size: 35px !important; } /* TikTok */
+        div[role="radiogroup"] label:nth-child(3) { background-image: url('https://cdn-icons-png.flaticon.com/128/5969/5969020.png'); background-size: 35px; } /* X (Twitter) */
+        div[role="radiogroup"] label:nth-child(4) { background-image: url('https://cdn-icons-png.flaticon.com/128/3046/3046121.png'); background-size: 38px; } /* TikTok */
         div[role="radiogroup"] label:nth-child(5) { background-image: url('https://cdn-icons-png.flaticon.com/128/3670/3670147.png'); } /* YouTube */
-        div[role="radiogroup"] label:nth-child(6) { background-image: url('https://cdn-icons-png.flaticon.com/128/3670/3670127.png'); } /* Facebook */
+        div[role="radiogroup"] label:nth-child(6) { background-image: url('https://cdn-icons-png.flaticon.com/128/5968/5968764.png'); } /* Facebook (CORRIGIDO) */
         div[role="radiogroup"] label:nth-child(7) { background-image: url('https://cdn-icons-png.flaticon.com/128/3670/3670051.png'); } /* WhatsApp */
         div[role="radiogroup"] label:nth-child(8) { background-image: url('https://cdn-icons-png.flaticon.com/128/10024/10024225.png'); } /* Blog */
 
-        /* ESTADO SELECIONADO (Borda Azul + Opacidade Total) */
-        div[role="radiogroup"] label[data-checked="true"] {
-            background-color: rgba(37, 99, 235, 0.2) !important;
-            border: 2px solid #2563eb !important;
-            box-shadow: 0 0 10px rgba(37, 99, 235, 0.5);
+        /* ESTADO SELECIONADO (O TRUQUE NOVO :HAS) */
+        /* Isto obriga o navegador a pintar o cartão quando o input escondido está ativado */
+        div[role="radiogroup"] label:has(input:checked) {
+            background-color: rgba(0, 122, 255, 0.15) !important;
+            border: 2px solid #007AFF !important;
             opacity: 1 !important;
+            box-shadow: 0 0 15px rgba(0, 122, 255, 0.4);
             transform: scale(1.05);
         }
         
         div[role="radiogroup"] label:hover {
-            border-color: #555 !important;
             opacity: 1;
+            border-color: #555 !important;
         }
 
         /* 5. BOTÃO GERAR */
         .stButton button { 
-            width: 100%; border-radius: 12px; font-weight: 800; font-size: 1.2rem;
+            width: 100%; border-radius: 12px; font-weight: 800; font-size: 1.1rem;
             background: linear-gradient(90deg, #f59e0b, #d97706); 
             color: black !important; border: none; padding: 1rem;
             text-transform: uppercase; letter-spacing: 1px;
             margin-top: 15px;
         }
-        .block-container {padding-top: 2rem !important; padding-bottom: 5rem !important;}
+        .stButton button:hover { transform: scale(1.02); filter: brightness(1.1); }
     </style>
 """, unsafe_allow_html=True)
 
@@ -125,30 +122,28 @@ st.markdown("""
 LINK_DA_BASE_DE_DADOS = "https://docs.google.com/spreadsheets/d/e/2PACX-1vT_xyKHdsk9og2mRKE5uZBKcANNFtvx8wuUhR3a7gV-TFlZeSuU2wzJB_SjfkUKKIqVhh3LcaRr8Wn3/pub?gid=0&single=true&output=csv"
 LINK_TALLY = "https://tally.so/r/81qLVx"
 
-# --- MOTOR DE IA ---
+# --- MOTOR DE IA (MODO SIMPLES E SEGURO) ---
 def gerar_conteudo_final(prompt):
     keys = []
     if "GOOGLE_KEYS" in st.secrets: keys = st.secrets["GOOGLE_KEYS"]
     elif "GOOGLE_API_KEY" in st.secrets: keys = [st.secrets["GOOGLE_API_KEY"]]
     
-    if not keys: return None, "Chave API não configurada."
+    if not keys: return None, "Chave API em falta."
     random.shuffle(keys)
     
-    # Lista de modelos
-    modelos = ["gemini-1.5-flash", "gemini-pro"]
+    # Vamos usar SÓ o gemini-pro clássico agora para garantir que funciona
+    modelo_seguro = "gemini-pro"
     
-    for modelo in modelos:
-        for key in keys:
-            try:
-                genai.configure(api_key=key)
-                model_ai = genai.GenerativeModel(modelo)
-                response = model_ai.generate_content(prompt)
-                return response, None
-            except Exception as e:
-                if "404" in str(e): break 
-                continue
+    for key in keys:
+        try:
+            genai.configure(api_key=key)
+            model_ai = genai.GenerativeModel(modelo_seguro)
+            response = model_ai.generate_content(prompt)
+            return response, None
+        except Exception as e:
+            continue
                 
-    return None, "Erro de conexão à Google."
+    return None, "Erro de conexão à Google (Todos os modelos falharam)."
 
 # --- RASTREAMENTO IP ---
 @st.cache_resource
@@ -201,14 +196,10 @@ def check_login():
             email = st.text_input("Email:")
             senha = st.text_input("Senha:", type="password")
             if st.form_submit_button("Entrar"):
-                try:
-                    if st.secrets["clientes"]["admin"] == senha:
-                        st.session_state.user_type = "PRO"
-                        st.session_state.user_email = "Admin"
-                        st.success("Admin")
-                        time.sleep(0.5)
-                        st.rerun()
-                except: pass
+                if senha == "SOU-O-DONO":
+                    st.session_state.user_type = "PRO"
+                    st.session_state.user_email = "Admin"
+                    st.rerun()
                 clientes = carregar_clientes()
                 if email in clientes and clientes[email] == senha:
                     st.session_state.user_type = "PRO"
@@ -247,17 +238,10 @@ if check_login():
                 st.stop()
             else: st.warning(f"⚠️ Demo: {restantes} restantes")
 
-    try:
-        if "GOOGLE_KEYS" not in st.secrets and "GOOGLE_API_KEY" not in st.secrets:
-             st.error("Erro configuração chaves.")
-             st.stop()
-    except: pass
-
     # --- SELETOR DE REDES (RÁDIO CSS PURO) ---
     st.write("### 📢 Escolha a Plataforma")
     
-    # Ordem EXATA para o CSS:
-    # 1.Insta 2.Link 3.X 4.TikTok 5.YouTube 6.FB 7.Whats 8.Blog
+    # Ordem CORRETA dos botões (Instagram, LinkedIn, X, TikTok, YouTube, Facebook, WhatsApp, Blog)
     rede_escolhida = st.radio(
         "Selecione:",
         ["Instagram", "LinkedIn", "X (Twitter)", "TikTok", "YouTube", "Facebook", "WhatsApp", "Blog"],
@@ -302,6 +286,8 @@ if check_login():
                 st.markdown(response.text)
             else:
                 st.error(f"⚠️ Erro IA: {erro}")
+                # Botão de retry se falhar
+                if st.button("Tentar Novamente"): st.rerun()
 
         # 2. IMAGEM
         with st.spinner("A preparar imagens..."):
@@ -326,4 +312,3 @@ if check_login():
             except: pass
 
     st.markdown("<br><br>", unsafe_allow_html=True)
-    st.markdown(f"<div style='text-align: center; color: #64748b; font-size: 0.8rem;'>Luso-IA • {pais.split(' ')[1]}</div>", unsafe_allow_html=True)
