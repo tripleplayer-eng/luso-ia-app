@@ -17,34 +17,24 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# --- CSS DE DESIGN (CORREÇÃO DA CHAPA BRANCA) ---
+# --- CSS DE CORREÇÃO (Botões Clicáveis + Remoção de Rodapé Embed) ---
 st.markdown("""
     <style>
-        /* 1. FUNDO GERAL */
+        /* 1. FUNDO PRETO */
         .stApp { background-color: #000000; }
         
         /* 2. TEXTOS */
         h1, h2, h3, p, label, div, span { color: #e2e8f0 !important; }
 
-        /* 3. CAIXAS DE TEXTO (BRANCO E PRETO - LEGIBILIDADE MÁXIMA) */
+        /* 3. INPUTS (BRANCO + PRETO) */
         .stTextInput input, .stTextArea textarea, .stSelectbox div[data-baseweb="select"] > div {
             background-color: #ffffff !important;
             color: #000000 !important;
-            border: 2px solid #3f3f46 !important;
-            border-radius: 12px !important;
-            font-weight: 600 !important;
-        }
-        /* Cor do texto dentro do dropdown */
-        ul[data-testid="stSelectboxVirtualDropdown"] li {
-            background-color: white !important;
-            color: black !important;
+            border: 1px solid #333 !important;
+            border-radius: 8px !important;
         }
 
-        /* 4. GRELHA DE BOTÕES (SUBSTITUI O IMAGE_SELECT) */
-        /* Ocultar as bolinhas dos rádio buttons */
-        div[role="radiogroup"] > label > div:first-child { display: none; }
-        
-        /* Configurar a grelha (4 colunas) */
+        /* 4. SELETOR DE REDES (CORREÇÃO DO CLIQUE) */
         div[role="radiogroup"] {
             display: grid;
             grid-template-columns: repeat(4, 1fr);
@@ -55,68 +45,68 @@ st.markdown("""
             div[role="radiogroup"] { grid-template-columns: repeat(2, 1fr); }
         }
 
-        /* ESTILO DE CADA CARTÃO (TRANSPARENTE/VIDRO) */
+        /* O TRUQUE: Não usamos display:none, usamos opacity:0 para manter o clique */
+        div[role="radiogroup"] label > div:first-child {
+            width: 0px;
+            height: 0px;
+            opacity: 0;
+            margin: 0;
+        }
+
+        /* ESTILO DO CARTÃO */
         div[role="radiogroup"] label {
-            background-color: #1c1c1e !important; /* Cinza Escuro Apple */
-            border: 1px solid #2c2c2e !important;
-            border-radius: 18px !important;
+            background-color: #111111 !important;
+            border: 1px solid #333 !important;
+            border-radius: 15px !important;
             height: 110px !important;
             width: 100% !important;
-            display: flex !important;
+            display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: flex-end;
-            padding-bottom: 12px !important;
+            padding-bottom: 10px;
             cursor: pointer;
-            transition: all 0.2s ease;
-            position: relative;
-            /* Preparar espaço para o ícone */
+            transition: all 0.2s;
             background-repeat: no-repeat;
-            background-position: center 25px;
+            background-position: center 20px;
             background-size: 45px;
-            color: #98989d !important; /* Texto cinza quando inativo */
-            font-size: 13px !important;
-            font-weight: 600 !important;
             margin: 0 !important;
         }
 
-        /* INJEÇÃO DOS ÍCONES (Um para cada botão) */
-        div[role="radiogroup"] label:nth-of-type(1) { background-image: url('https://cdn-icons-png.flaticon.com/128/3955/3955024.png'); } /* Insta */
-        div[role="radiogroup"] label:nth-of-type(2) { background-image: url('https://cdn-icons-png.flaticon.com/128/145/145807.png'); } /* LinkedIn */
-        div[role="radiogroup"] label:nth-of-type(3) { background-image: url('https://cdn-icons-png.flaticon.com/128/3670/3670151.png'); background-size: 40px; } /* Twitter */
-        div[role="radiogroup"] label:nth-of-type(4) { background-image: url('https://cdn-icons-png.flaticon.com/128/3046/3046121.png'); background-size: 40px; } /* TikTok */
-        div[role="radiogroup"] label:nth-of-type(5) { background-image: url('https://cdn-icons-png.flaticon.com/128/3670/3670147.png'); } /* YouTube */
+        /* ÍCONES REAIS */
+        div[role="radiogroup"] label:nth-child(1) { background-image: url('https://cdn-icons-png.flaticon.com/128/3955/3955024.png'); } /* Insta */
+        div[role="radiogroup"] label:nth-child(2) { background-image: url('https://cdn-icons-png.flaticon.com/128/145/145807.png'); } /* LinkedIn */
+        div[role="radiogroup"] label:nth-child(3) { background-image: url('https://cdn-icons-png.flaticon.com/128/3670/3670151.png'); background-size: 40px; } /* X */
+        div[role="radiogroup"] label:nth-child(4) { background-image: url('https://cdn-icons-png.flaticon.com/128/3046/3046121.png'); background-size: 40px; } /* TikTok */
+        div[role="radiogroup"] label:nth-child(5) { background-image: url('https://cdn-icons-png.flaticon.com/128/3670/3670147.png'); } /* YouTube */
         div[role="radiogroup"] label:nth-of-type(6) { background-image: url('https://cdn-icons-png.flaticon.com/128/3670/3670127.png'); } /* Facebook */
-        div[role="radiogroup"] label:nth-of-type(7) { background-image: url('https://cdn-icons-png.flaticon.com/128/3670/3670051.png'); } /* WhatsApp */
-        div[role="radiogroup"] label:nth-of-type(8) { background-image: url('https://cdn-icons-png.flaticon.com/128/10024/10024225.png'); } /* Blog */
+        div[role="radiogroup"] label:nth-child(7) { background-image: url('https://cdn-icons-png.flaticon.com/128/3670/3670051.png'); } /* WhatsApp */
+        div[role="radiogroup"] label:nth-child(8) { background-image: url('https://cdn-icons-png.flaticon.com/128/10024/10024225.png'); } /* Blog */
 
-        /* HOVER */
-        div[role="radiogroup"] label:hover {
-            background-color: #2c2c2e !important;
+        /* ESTADO SELECIONADO (Borda e Brilho) */
+        div[role="radiogroup"] label[data-checked="true"] {
+            background-color: rgba(37, 99, 235, 0.15) !important;
+            border: 2px solid #2563eb !important;
+            box-shadow: 0 0 15px rgba(37, 99, 235, 0.4);
             transform: scale(1.02);
         }
 
-        /* SELECIONADO (DESTAQUE) */
-        div[role="radiogroup"] label[data-checked="true"] {
-            background-color: #007AFF !important; /* Azul Apple */
-            border: 2px solid #007AFF !important;
-            color: white !important;
-            box-shadow: 0 0 20px rgba(0, 122, 255, 0.4);
-        }
-
-        /* 5. LIMPEZA */
-        header[data-testid="stHeader"], #MainMenu, footer {display: none !important;}
-        .block-container {padding-top: 2rem !important; padding-bottom: 5rem !important;}
+        /* 5. REMOVER RODAPÉS (Código de Embed) */
+        header {visibility: hidden;}
+        footer {visibility: hidden;}
+        #MainMenu {visibility: hidden;}
+        .stApp > header {display: none;}
+        /* Remove a barra "Built with Streamlit" em modo embed */
+        .viewerBadge-container {display: none !important;}
         
         /* 6. BOTÃO GERAR */
         .stButton button { 
-            width: 100%; border-radius: 14px; font-weight: 800; font-size: 1.2rem;
-            background: linear-gradient(90deg, #f59e0b, #d97706); /* Ouro */
-            color: black !important; border: none; padding: 1rem;
-            text-transform: uppercase; letter-spacing: 0.5px;
-            margin-top: 15px;
+            width: 100%; border-radius: 12px; font-weight: 700; font-size: 1.1rem;
+            background: linear-gradient(90deg, #2563eb, #4f46e5); 
+            color: white !important; border: none; padding: 1rem;
+            margin-top: 10px;
         }
-        .stButton button:hover { transform: scale(1.02); filter: brightness(1.1); }
+        .stButton button:hover { transform: scale(1.01); box-shadow: 0 5px 15px rgba(37, 99, 235, 0.4); }
     </style>
 """, unsafe_allow_html=True)
 
@@ -124,18 +114,17 @@ st.markdown("""
 LINK_DA_BASE_DE_DADOS = "https://docs.google.com/spreadsheets/d/e/2PACX-1vT_xyKHdsk9og2mRKE5uZBKcANNFtvx8wuUhR3a7gV-TFlZeSuU2wzJB_SjfkUKKIqVhh3LcaRr8Wn3/pub?gid=0&single=true&output=csv"
 LINK_TALLY = "https://tally.so/r/81qLVx"
 
-# --- MOTOR DE IA (SOLUÇÃO ERRO 404) ---
-# Tenta modelos alternativos se o principal falhar
+# --- MOTOR IA (ROBUSTO) ---
 def gerar_conteudo_final(prompt):
     keys = []
     if "GOOGLE_KEYS" in st.secrets: keys = st.secrets["GOOGLE_KEYS"]
     elif "GOOGLE_API_KEY" in st.secrets: keys = [st.secrets["GOOGLE_API_KEY"]]
     
-    if not keys: return None, "Chave API não encontrada."
+    if not keys: return None, "Chave API não configurada."
     random.shuffle(keys)
     
-    # Ordem: Flash -> Pro 1.5 -> Pro 1.0 (O mais estável)
-    modelos = ["gemini-1.5-flash", "gemini-1.5-pro", "gemini-pro"]
+    # Lista de modelos (Flash primeiro, Pro depois)
+    modelos = ["gemini-1.5-flash", "gemini-pro"]
     
     for modelo in modelos:
         for key in keys:
@@ -145,10 +134,10 @@ def gerar_conteudo_final(prompt):
                 response = model_ai.generate_content(prompt)
                 return response, None
             except Exception as e:
-                if "404" in str(e): break # Modelo não existe neste servidor, muda de modelo
-                continue # Outro erro (quota), muda de chave
+                if "404" in str(e): break # Erro de modelo, troca modelo
+                continue # Erro de chave, troca chave
                 
-    return None, "Erro de conexão aos servidores da Google."
+    return None, "Erro de conexão à Google."
 
 # --- RASTREAMENTO IP ---
 @st.cache_resource
@@ -204,7 +193,10 @@ def check_login():
                 if senha == "SOU-O-DONO":
                     st.session_state.user_type = "PRO"
                     st.session_state.user_email = "Admin"
+                    st.success("Admin Ativo")
+                    time.sleep(0.5)
                     st.rerun()
+
                 clientes = carregar_clientes()
                 if email in clientes and clientes[email] == senha:
                     st.session_state.user_type = "PRO"
@@ -239,11 +231,11 @@ if check_login():
             restantes = 3 - usos_ip
             if restantes <= 0:
                 st.error("Demonstração terminada.")
-                st.markdown(f"<a href='{LINK_TALLY}' target='_blank' style='display:block;text-align:center;background:#dc2626;color:white;padding:15px;border-radius:8px;text-decoration:none;font-size:1.1em;'>🔓 Desbloquear Acesso Ilimitado</a>", unsafe_allow_html=True)
+                st.markdown(f"<a href='{LINK_TALLY}' target='_blank' style='display:block;text-align:center;background:#dc2626;color:white;padding:15px;border-radius:8px;text-decoration:none;font-size:1.1em;'>🔓 Desbloquear</a>", unsafe_allow_html=True)
                 st.stop()
             else: st.warning(f"⚠️ Demo: {restantes} restantes")
 
-    # --- NOVO SELETOR: USAMOS ST.RADIO + CSS PURO ---
+    # --- SELETOR DE REDES (COM CSS CORRIGIDO) ---
     st.write("### 📢 Escolha a Plataforma")
     
     rede_escolhida = st.radio(
@@ -254,7 +246,7 @@ if check_login():
     )
 
     with st.form("gerador"):
-        st.write("### ⚙️ Detalhes do Post")
+        st.write("### ⚙️ Detalhes")
         col_a, col_b = st.columns(2)
         with col_a: 
             pais = st.selectbox("País", ["🇵🇹 Portugal", "🇧🇷 Brasil", "🇦🇴 Angola", "🇲🇿 Moçambique", "🇨🇻 Cabo Verde", "🇬🇼 Guiné", "🇸🇹 São Tomé", "🇹🇱 Timor"])
@@ -281,6 +273,7 @@ if check_login():
             Data Atual: {data_hoje}.
             Atua como Copywriter Sénior. País: {pais}. Rede: {rede_escolhida}. Tom: {tom}. 
             Negócio: {negocio}. Tópico: {tema}. 
+            Objetivo: Criar conteúdo focado em vendas e cultura local.
             """
             
             response, erro = gerar_conteudo_final(prompt)
@@ -288,12 +281,12 @@ if check_login():
                 st.markdown(response.text)
             else:
                 st.error(f"⚠️ Erro IA: {erro}")
-                # FALLBACK DE SEGURANÇA
-                st.info("A tentar motor alternativo...")
+                if st.button("Tentar Novamente"): st.rerun()
 
         # 2. IMAGEM
         with st.spinner("A preparar imagens..."):
             try:
+                # Prompt visual
                 clean_keywords = f"{negocio} {tema}"
                 try:
                     if response:
@@ -301,16 +294,18 @@ if check_login():
                         if vis_resp: clean_keywords = vis_resp.text.strip()
                 except: pass
                 
+                # A. Imagem IA
                 seed = random.randint(1, 999999)
                 prompt_img = f"Professional product photography of {clean_keywords}, {pais} aesthetic, cinematic lighting, 4k, photorealistic, no text, object focused, no people"
                 prompt_clean = urllib.parse.quote(prompt_img)
                 url_img = f"https://image.pollinations.ai/prompt/{prompt_clean}?width=1024&height=1024&model=flux&seed={seed}&nologo=true"
                 st.image(url_img, caption="Imagem Gerada (IA)")
                 
+                # B. Link Unsplash
                 termo_safe = re.sub(r'[^\w\s]', '', clean_keywords).strip().replace(" ", "-")
                 if not termo_safe: termo_safe = "business"
                 st.markdown(f"<a href='https://unsplash.com/s/photos/{termo_safe}' target='_blank'><button style='width:100%;padding:10px;border-radius:8px;border:1px solid #334155;background:#1e293b;color:white;cursor:pointer;font-weight:bold;margin-top:10px;'>🔍 Ver fotos reais no Unsplash (Backup)</button></a>", unsafe_allow_html=True)
             except: pass
 
     st.markdown("<br><br>", unsafe_allow_html=True)
-    st.markdown(f"<div style='text-align: center; color: #64748b; font-size: 0.8rem;'>Luso-IA • {pais.split(' ')[1]}</div>", unsafe_allow_html=True)
+
