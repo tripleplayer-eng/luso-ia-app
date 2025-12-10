@@ -1,7 +1,6 @@
 import streamlit as st
 import google.generativeai as genai
 import pandas as pd
-from streamlit_image_select import image_select
 import time
 import random
 import urllib.parse
@@ -18,41 +17,90 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# --- CSS DE ALTO CONTRASTE (CORREÇÃO FINAL) ---
+# --- CSS PREMIUM (SEM CHAPAS BRANCAS) ---
 st.markdown("""
     <style>
-        /* 1. FUNDO GERAL */
+        /* 1. FUNDO */
         .stApp { background-color: #020617; }
         h1, h2, h3, p, label, div, span { color: #e2e8f0 !important; }
 
-        /* 2. CAIXAS DE TEXTO E DROPDOWNS (BRANCO E PRETO) */
-        /* Isto força o texto a ser PRETO e o fundo BRANCO */
+        /* 2. INPUTS (BRANCO + LETRA PRETA) */
         .stTextInput input, .stTextArea textarea, .stSelectbox div[data-baseweb="select"] > div {
             background-color: #ffffff !important;
             color: #000000 !important;
-            -webkit-text-fill-color: #000000 !important; /* Força no Safari */
             border: 2px solid #94a3b8 !important;
             border-radius: 8px !important;
             font-weight: 600 !important;
         }
-        
-        /* Cor do texto DENTRO do menu quando ele abre */
         ul[data-testid="stSelectboxVirtualDropdown"] li {
-            background-color: #ffffff !important;
             color: #000000 !important;
+            background-color: #ffffff !important;
         }
+
+        /* 3. BOTÕES REDES SOCIAIS (CSS PURO - FLUTUANTES) */
+        div[role="radiogroup"] {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 12px;
+            width: 100%;
+        }
+        div[role="radiogroup"] > label > div:first-child { display: none; } /* Esconde bolinha */
         
-        /* 3. LIMPEZA */
+        /* Estilo do Cartão */
+        div[role="radiogroup"] label {
+            background-color: rgba(30, 41, 59, 0.4) !important;
+            border: 1px solid rgba(255, 255, 255, 0.1) !important;
+            border-radius: 12px !important;
+            height: 100px !important;
+            width: 100% !important;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-end;
+            padding-bottom: 10px;
+            cursor: pointer;
+            transition: all 0.2s;
+            background-repeat: no-repeat;
+            background-position: center 20px;
+            background-size: 40px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+            margin-right: 0px !important; /* Corrige alinhamento */
+        }
+
+        /* ÍCONES */
+        div[role="radiogroup"] label:nth-child(1) { background-image: url('https://cdn-icons-png.flaticon.com/128/2111/2111463.png'); }
+        div[role="radiogroup"] label:nth-child(2) { background-image: url('https://cdn-icons-png.flaticon.com/128/174/174857.png'); }
+        div[role="radiogroup"] label:nth-child(3) { background-image: url('https://cdn-icons-png.flaticon.com/128/3046/3046121.png'); }
+        div[role="radiogroup"] label:nth-child(4) { background-image: url('https://cdn-icons-png.flaticon.com/128/5968/5968764.png'); }
+        div[role="radiogroup"] label:nth-child(5) { background-image: url('https://cdn-icons-png.flaticon.com/128/1384/1384060.png'); }
+        div[role="radiogroup"] label:nth-child(6) { background-image: url('https://cdn-icons-png.flaticon.com/128/5969/5969020.png'); background-size: 30px; }
+        div[role="radiogroup"] label:nth-child(7) { background-image: url('https://cdn-icons-png.flaticon.com/128/733/733585.png'); }
+        div[role="radiogroup"] label:nth-child(8) { background-image: url('https://cdn-icons-png.flaticon.com/128/4922/4922073.png'); }
+
+        /* SELECIONADO (Borda Brilhante) */
+        div[role="radiogroup"] label[data-checked="true"] {
+            background-color: rgba(37, 99, 235, 0.2) !important;
+            border: 2px solid #3b82f6 !important;
+            box-shadow: 0 0 15px rgba(59, 130, 246, 0.5) !important;
+            color: white !important;
+            transform: scale(1.02);
+        }
+        div[role="radiogroup"] label:hover {
+            border-color: #60a5fa;
+            transform: translateY(-2px);
+        }
+
+        /* 4. LIMPEZA */
         header[data-testid="stHeader"], #MainMenu, footer {display: none !important;}
-        .block-container {padding-top: 2rem !important; padding-bottom: 5rem !important;}
+        .block-container {padding-top: 1rem !important; padding-bottom: 5rem !important;}
         
-        /* 4. BOTÃO GERAR (OURO/LARANJA) */
+        /* 5. BOTÃO GERAR */
         .stButton button { 
             width: 100%; border-radius: 12px; font-weight: 800; font-size: 1.2rem;
             background: linear-gradient(90deg, #f59e0b, #d97706); 
             color: black !important; border: none; padding: 1rem;
             text-transform: uppercase; letter-spacing: 1px;
-            margin-top: 20px;
+            margin-top: 10px;
         }
         .stButton button:hover { transform: scale(1.02); filter: brightness(1.1); }
     </style>
@@ -62,30 +110,40 @@ st.markdown("""
 LINK_DA_BASE_DE_DADOS = "https://docs.google.com/spreadsheets/d/e/2PACX-1vT_xyKHdsk9og2mRKE5uZBKcANNFtvx8wuUhR3a7gV-TFlZeSuU2wzJB_SjfkUKKIqVhh3LcaRr8Wn3/pub?gid=0&single=true&output=csv"
 LINK_TALLY = "https://tally.so/r/81qLVx"
 
-# --- MOTOR DE IA ---
-def gerar_conteudo_seguro(prompt):
+# --- MOTOR DE IA BLINDADO (ROTAÇÃO TOTAL) ---
+def gerar_conteudo_final(prompt):
+    # 1. Recuperar Chaves
     keys = []
     if "GOOGLE_KEYS" in st.secrets: keys = st.secrets["GOOGLE_KEYS"]
     elif "GOOGLE_API_KEY" in st.secrets: keys = [st.secrets["GOOGLE_API_KEY"]]
     
-    if not keys: return None, "Sem chaves API."
+    if not keys: return None, "Chave API não configurada."
+    
+    # Baralhar para não usar sempre a mesma
     random.shuffle(keys)
     
-    # Modelos seguros
-    modelos = ["gemini-1.5-flash", "gemini-pro"]
+    # 2. Lista de Modelos (Do mais rápido para o mais compatível)
+    # Importante: 'gemini-pro' (v1.0) é o fallback que nunca falha em 404
+    modelos = ["gemini-1.5-flash", "gemini-1.5-pro", "gemini-1.0-pro", "gemini-pro"]
     
+    erros_log = []
+    
+    # 3. Tentativa de Força Bruta (Loop Duplo)
     for modelo in modelos:
         for key in keys:
             try:
                 genai.configure(api_key=key)
                 model_ai = genai.GenerativeModel(modelo)
                 response = model_ai.generate_content(prompt)
-                return response, None
+                return response, None # Sucesso! Sai da função
             except Exception as e:
-                if "404" in str(e): break 
+                erros_log.append(f"{modelo}: {str(e)}")
+                # Se for erro 429 (Quota), continua para a próxima chave
+                # Se for erro 404 (Modelo), sai do loop de chaves e muda de modelo
+                if "404" in str(e): break
                 continue
                 
-    return None, "Erro de conexão. Tente novamente."
+    return None, f"Falha. Detalhes: {erros_log[0] if erros_log else 'Desconhecido'}"
 
 # --- RASTREAMENTO IP ---
 @st.cache_resource
@@ -139,22 +197,21 @@ def check_login():
             email = st.text_input("Email:")
             senha = st.text_input("Senha:", type="password")
             if st.form_submit_button("Entrar"):
-                # MODO ADMIN (TESTADO E VALIDADO)
+                # ADMIN
                 if senha == "SOU-O-DONO":
                     st.session_state.user_type = "PRO"
                     st.session_state.user_email = "Admin"
-                    st.success("⚡ Modo Dono Ativo!")
+                    st.success("⚡ Admin Ativo")
                     time.sleep(0.5)
                     st.rerun()
-
-                # MODO CLIENTE
+                
+                # CLIENTE
                 clientes = carregar_clientes()
                 if email in clientes and clientes[email] == senha:
                     st.session_state.user_type = "PRO"
                     st.session_state.user_email = email
                     st.rerun()
-                else:
-                    st.error("Dados incorretos.")
+                else: st.error("Dados incorretos.")
     
     with tab2:
         usos_atuais = usage_tracker.get(user_ip, 0)
@@ -177,48 +234,32 @@ if check_login():
         except: st.write("🌍")
     with col2:
         st.title("Luso-IA")
-        if st.session_state.user_type == "PRO": st.success("✅ Modo PRO Ativo")
+        if st.session_state.user_type == "PRO": st.success("✅ Modo PRO")
         else:
             usos_ip = usage_tracker.get(user_ip, 0)
             restantes = 3 - usos_ip
             if restantes <= 0:
                 st.error("Demonstração terminada.")
-                st.markdown(f"<a href='{LINK_TALLY}' target='_blank' style='display:block;text-align:center;background:#dc2626;color:white;padding:15px;border-radius:8px;text-decoration:none;font-size:1.1em;'>🔓 Desbloquear Acesso Ilimitado</a>", unsafe_allow_html=True)
+                st.markdown(f"<a href='{LINK_TALLY}' target='_blank' style='display:block;text-align:center;background:#dc2626;color:white;padding:15px;border-radius:8px;text-decoration:none;font-size:1.1em;'>🔓 Desbloquear</a>", unsafe_allow_html=True)
                 st.stop()
             else: st.warning(f"⚠️ Demo: {restantes} restantes")
 
     try:
-        # Check rápido de chaves
+        # Verifica se existem chaves antes de carregar
         if "GOOGLE_KEYS" not in st.secrets and "GOOGLE_API_KEY" not in st.secrets:
-             st.error("Erro: API Key em falta.")
+             st.error("Erro: Sem API Keys configuradas.")
              st.stop()
     except: pass
 
-    # --- SELETOR DE REDES (VOLTAMOS AO image_select PORQUE FUNCIONA!) ---
-    # Isto cria os botões alinhados, com imagens reais e seleção visível
+    # --- SELETOR DE REDES (CSS PURO - FUNCIONA SEMPRE) ---
     st.write("### 📢 Publicar onde?")
     
-    rede_escolhida_idx = image_select(
-        label="",
-        images=[
-            "https://cdn-icons-png.flaticon.com/512/2111/2111463.png", # Instagram
-            "https://cdn-icons-png.flaticon.com/512/174/174857.png",   # LinkedIn
-            "https://cdn-icons-png.flaticon.com/512/3046/3046121.png", # TikTok
-            "https://cdn-icons-png.flaticon.com/512/5968/5968764.png", # Facebook
-            "https://cdn-icons-png.flaticon.com/512/1384/1384060.png", # YouTube
-            "https://cdn-icons-png.flaticon.com/512/5969/5969020.png", # Twitter
-            "https://cdn-icons-png.flaticon.com/512/733/733585.png",    # WhatsApp
-            "https://cdn-icons-png.flaticon.com/512/4922/4922073.png"  # Blog
-        ],
-        captions=["Instagram", "LinkedIn", "TikTok", "Facebook", "YouTube", "Twitter", "WhatsApp", "Blog"],
-        index=0,
-        return_value="index", # Retorna o índice para mapearmos nós o nome
-        use_container_width=True # FORÇA O ALINHAMENTO COM A LARGURA DA PÁGINA
+    rede_escolhida = st.radio(
+        "Selecione:",
+        ["Instagram", "LinkedIn", "TikTok", "Facebook", "YouTube", "Twitter", "WhatsApp", "Blog"],
+        horizontal=True,
+        label_visibility="collapsed"
     )
-
-    # Mapear índice para nome
-    redes_nomes = ["Instagram", "LinkedIn", "TikTok", "Facebook", "YouTube", "Twitter", "WhatsApp", "Blog"]
-    rede_nome = redes_nomes[rede_escolhida_idx]
 
     with st.form("gerador"):
         st.write("### ⚙️ Configuração")
@@ -247,17 +288,17 @@ if check_login():
             prompt = f"""
             Data Atual: {data_hoje}.
             Atua como Copywriter Sénior da Luso-IA.
-            País: {pais}. Rede: {rede_nome}. Tom: {tom}. 
+            País: {pais}. Rede: {rede_escolhida}. Tom: {tom}. 
             Negócio: {negocio}. Tópico: {tema}. 
             Objetivo: Criar conteúdo focado em vendas e cultura local.
             """
             
-            response, erro = gerar_conteudo_seguro(prompt)
+            response, erro = gerar_conteudo_final(prompt)
             if response:
                 st.markdown(response.text)
             else:
-                st.error(f"⚠️ Erro IA: {erro}")
-                st.warning("O sistema tentou vários modelos mas falharam. Verifique a API Key.")
+                st.error(f"⚠️ Erro de Ligação: {erro}")
+                st.warning("Verifique se as suas API Keys têm permissão e quota.")
 
         # 2. IMAGEM
         with st.spinner("A preparar imagens..."):
@@ -265,7 +306,7 @@ if check_login():
                 clean_keywords = f"{negocio} {tema}"
                 try:
                     if response:
-                        vis_resp, _ = gerar_conteudo_seguro(f"Identify 3 English keywords for a stock photo about: '{negocio} {tema}' in {pais}. Output ONLY the 3 words.")
+                        vis_resp, _ = gerar_conteudo_final(f"Identify 3 English keywords for a stock photo about: '{negocio} {tema}' in {pais}. Output ONLY words.")
                         if vis_resp: clean_keywords = vis_resp.text.strip()
                 except: pass
                 
@@ -282,4 +323,3 @@ if check_login():
 
     st.markdown("<br><br>", unsafe_allow_html=True)
     st.markdown(f"<div style='text-align: center; color: #64748b; font-size: 0.8rem;'>Luso-IA • {pais.split(' ')[1]}</div>", unsafe_allow_html=True)
-
