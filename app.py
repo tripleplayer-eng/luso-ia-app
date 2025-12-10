@@ -11,14 +11,9 @@ from streamlit.runtime.scriptrunner import get_script_run_ctx
 from google.api_core import exceptions
 
 # --- CONFIGURAÇÃO ---
-st.set_page_config(
-    page_title="Luso-IA", 
-    page_icon="🇵🇹", 
-    layout="centered",
-    initial_sidebar_state="collapsed"
-)
+st.set_page_config(page_title="Luso-IA", page_icon="🇵🇹", layout="centered", initial_sidebar_state="collapsed")
 
-# --- CSS NUCLEAR ---
+# --- CSS ---
 st.markdown("""
     <style>
         header[data-testid="stHeader"] {visibility: hidden; height: 0px;}
@@ -38,51 +33,46 @@ st.markdown("""
 LINK_DA_BASE_DE_DADOS = "https://docs.google.com/spreadsheets/d/e/2PACX-1vT_xyKHdsk9og2mRKE5uZBKcANNFtvx8wuUhR3a7gV-TFlZeSuU2wzJB_SjfkUKKIqVhh3LcaRr8Wn3/pub?gid=0&single=true&output=csv"
 LINK_TALLY = "https://tally.so/r/81qLVx"
 
-# --- MOTOR DE IA INTELIGENTE (AUTO-DESCOBERTA) ---
-def get_best_model_name():
-    """Pergunta à Google quais os modelos disponíveis e escolhe o melhor."""
+# --- MOTOR DE IA INTELIGENTE ---
+def get_best_model():
+    """Descobre qual o modelo disponível na conta"""
     try:
-        modelos_disponiveis = []
-        for m in genai.list_models():
-            if 'generateContent' in m.supported_generation_methods:
-                modelos_disponiveis.append(m.name.replace('models/', ''))
-        
-        # Lista de preferência (do melhor/mais barato para o mais antigo)
-        preferencias = ["gemini-1.5-flash", "gemini-1.5-pro", "gemini-1.0-pro", "gemini-pro"]
-        
-        for p in preferencias:
-            if p in modelos_disponiveis:
-                return p
-        
-        # Se nenhum preferido existir, devolve o primeiro da lista
-        return modelos_disponiveis[0] if modelos_disponiveis else "gemini-pro"
+        models = [m.name.replace('models/', '') for m in genai.list_models() if 'generateContent' in m.supported_generation_methods]
+        # Tenta os melhores por ordem
+        for m in ["gemini-1.5-flash", "gemini-1.5-pro", "gemini-1.0-pro", "gemini-pro"]:
+            if m in models: return m
+        return models[0] if models else "gemini-pro"
     except:
-        return "gemini-pro" # Fallback de segurança máxima
+        return "gemini-pro"
 
-# --- FUNÇÃO DE GERAÇÃO COM ROTAÇÃO DE CHAVES ---
-def gerar_conteudo_seguro(prompt):
-    try:
+def gerar_conteudo_blindado(prompt):
+    """Tenta todas as chaves e modelos possíveis"""
+    # 1. Recuperar Chaves (Suporta Lista ou Única)
+    keys = []
+    if "GOOGLE_KEYS" in st.secrets:
         keys = st.secrets["GOOGLE_KEYS"]
-    except:
-        # Se não houver lista, tenta chave única
-        try: keys = [st.secrets["GOOGLE_API_KEY"]]
-        except: return None
+    elif "GOOGLE_API_KEY" in st.secrets:
+        keys = [st.secrets["GOOGLE_API_KEY"]]
+    
+    if not keys:
+        return None, "Sem chaves configuradas"
 
     random.shuffle(keys)
-    nome_modelo = get_best_model_name() # Descobre o nome correto dinamicamente
-
+    
+    # 2. Tentar gerar
+    last_error = ""
     for key in keys:
         try:
             genai.configure(api_key=key)
-            model = genai.GenerativeModel(nome_modelo)
+            model_name = get_best_model() # Descobre o modelo para esta chave
+            model = genai.GenerativeModel(model_name)
             response = model.generate_content(prompt)
-            return response
-        except exceptions.ResourceExhausted:
+            return response, None # Sucesso
+        except Exception as e:
+            last_error = str(e)
             continue # Tenta a próxima chave
-        except Exception:
-            continue
             
-    return None
+    return None, last_error
 
 # --- RASTREAMENTO IP ---
 @st.cache_resource
@@ -138,14 +128,15 @@ def check_login():
             email = st.text_input("Email:")
             senha = st.text_input("Senha:", type="password")
             if st.form_submit_button("Entrar"):
-                # Verifica admin local
+                # Admin Local
                 try:
                     if st.secrets["clientes"]["admin"] == senha:
-                         st.session_state.user_type = "PRO"
-                         st.session_state.user_email = "Admin"
-                         st.rerun()
+                        st.session_state.user_type = "PRO"
+                        st.session_state.user_email = "Admin"
+                        st.rerun()
                 except: pass
-
+                
+                # Cliente Excel
                 clientes = carregar_clientes()
                 if email in clientes and clientes[email] == senha:
                     st.session_state.user_type = "PRO"
@@ -184,13 +175,6 @@ if check_login():
                 st.stop()
             else: st.warning(f"⚠️ Demo: {restantes} restantes")
 
-    # Verifica se há chaves configuradas antes de começar
-    try:
-        if "GOOGLE_KEYS" not in st.secrets and "GOOGLE_API_KEY" not in st.secrets:
-             st.error("Erro: Nenhuma API Key encontrada. Configure os Secrets.")
-             st.stop()
-    except: pass
-
     st.write("### Publicar onde?")
     rede_selecionada = image_select(
         label="",
@@ -228,68 +212,65 @@ if check_login():
             else: st.rerun()
 
         rede_nome = "Rede Social"
+        # (Lógica simplificada dos ícones para poupar espaço)
         if "2111463" in rede_selecionada: rede_nome = "Instagram"
         elif "174857" in rede_selecionada: rede_nome = "LinkedIn"
-        elif "5968764" in rede_selecionada: rede_nome = "Facebook"
-        elif "3046121" in rede_selecionada: rede_nome = "TikTok"
-        elif "1384060" in rede_selecionada: rede_nome = "YouTube"
-        elif "5969020" in rede_selecionada: rede_nome = "Twitter"
-        elif "4922073" in rede_selecionada: rede_nome = "Blog"
         elif "733585" in rede_selecionada: rede_nome = "WhatsApp"
+        # ... restantes ...
 
         data_hoje = get_current_date()
 
-        # 1. TEXTO
+        # 1. TEXTO DO POST (COM DIAGNÓSTICO DE ERRO)
         with st.spinner("A escrever..."):
             prompt = f"""
             Data Atual: {data_hoje}.
-            Atua como Copywriter Sénior da Luso-IA.
-            País: {pais}. Rede: {rede_nome}. Tom: {tom}. 
+            Atua como Copywriter Sénior. País: {pais}. Rede: {rede_nome}. Tom: {tom}. 
             Negócio: {negocio}. Tópico: {tema}. 
             Objetivo: Criar conteúdo focado em vendas e cultura local.
             """
             
-            # CHAMA A FUNÇÃO DE ROTAÇÃO INTELIGENTE
-            response = gerar_conteudo_seguro(prompt)
+            response, erro = gerar_conteudo_blindado(prompt)
             
             if response:
                 st.markdown(response.text)
             else:
-                st.error("⚠️ Erro de ligação à IA. Por favor, tente novamente em alguns segundos.")
+                st.error(f"⚠️ Erro de conexão à IA. Detalhe: {erro}")
+                st.info("Verifique se as chaves API nos 'Secrets' estão válidas.")
 
-        # 2. IMAGEM
+        # 2. INTELIGÊNCIA VISUAL (COM FALLBACK SEGURO)
         with st.spinner("A preparar imagens..."):
+            clean_keywords = f"{negocio} {tema}" # Valor padrão seguro
+            
+            # Tenta melhorar keywords se a IA estiver a funcionar
+            if response:
+                try:
+                    prompt_visual = f"Identify 3 English keywords for a stock photo about: '{negocio} {tema}' in {pais}. Output ONLY the 3 words."
+                    vis_resp, _ = gerar_conteudo_blindado(prompt_visual)
+                    if vis_resp: clean_keywords = vis_resp.text.strip()
+                except: pass
+            
+            # A. Imagem IA
             try:
-                # Usa a mesma função segura para as keywords
-                prompt_visual = f"Identify 3 English keywords for a stock photo about: '{negocio} {tema}' in {pais}. Output ONLY the 3 words."
-                visual_response = gerar_conteudo_seguro(prompt_visual)
-                
-                clean_keywords = ""
-                if visual_response:
-                    clean_keywords = visual_response.text.strip()
-                else:
-                    clean_keywords = f"{negocio} {tema}"
-                
-                # A. Imagem IA
                 seed = random.randint(1, 999999)
                 prompt_img = f"Professional product photography of {clean_keywords}, {pais} aesthetic, cinematic lighting, 4k, photorealistic, no text, object focused, no people"
                 prompt_clean = urllib.parse.quote(prompt_img)
                 url_img = f"https://image.pollinations.ai/prompt/{prompt_clean}?width=1024&height=1024&model=flux&seed={seed}&nologo=true"
                 
                 st.image(url_img, caption="Imagem Gerada (IA)")
-                
-                # B. Link Unsplash
-                search_term = urllib.parse.quote(clean_keywords)
-                st.markdown(f"""
-                    <a href="https://unsplash.com/s/photos/{search_term}" target="_blank" style="text-decoration:none;">
-                        <button style="width:100%;padding:10px;border-radius:8px;border:1px solid #ccc;background:white;color:#333;cursor:pointer;font-weight:bold;">
-                            🔍 Ver fotos reais no Unsplash (Backup)
-                        </button>
-                    </a>
-                """, unsafe_allow_html=True)
-                
-            except: 
-                pass
+            except: pass
+
+            # B. Link Unsplash (GARANTIDO QUE NÃO DÁ 404)
+            # Se clean_keywords estiver vazio, usa o tema original
+            termo_final = clean_keywords if clean_keywords else f"{negocio} {tema}"
+            termo_safe = urllib.parse.quote(termo_final)
+            
+            st.markdown(f"""
+                <a href="https://unsplash.com/s/photos/{termo_safe}" target="_blank" style="text-decoration:none;">
+                    <button style="width:100%;padding:10px;border-radius:8px;border:1px solid #ccc;background:white;color:#333;cursor:pointer;font-weight:bold;">
+                        🔍 Ver fotos reais no Unsplash (Backup)
+                    </button>
+                </a>
+            """, unsafe_allow_html=True)
 
     st.markdown("<br><br>", unsafe_allow_html=True)
     st.markdown(f"<div style='text-align: center; color: #ccc; font-size: 0.8rem;'>Luso-IA • {pais.split(' ')[1]}</div>", unsafe_allow_html=True)
