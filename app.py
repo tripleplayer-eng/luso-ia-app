@@ -3,7 +3,6 @@ import google.generativeai as genai
 import pandas as pd
 import time
 import random
-import urllib.parse
 from datetime import datetime
 from streamlit import runtime
 from streamlit.runtime.scriptrunner import get_script_run_ctx
@@ -17,107 +16,93 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# --- CSS DE CORREÇÃO VISUAL (TEXTO PRETO EM FUNDO BRANCO) ---
+# --- CSS PROFISSIONAL (CORRIGIDO) ---
 st.markdown("""
     <style>
-        /* 1. FUNDO GERAL ESCURO */
-        .stApp {
-            background-color: #020617;
-        }
+        /* 1. FUNDO GERAL */
+        .stApp { background-color: #020617; }
         
-        /* 2. TEXTOS GERAIS (Títulos e Labels) */
-        h1, h2, h3, p, label, .stMarkdown {
-            color: #ffffff !important;
-        }
+        /* 2. TEXTOS */
+        h1, h2, h3, p, label, div, span { color: #e2e8f0 !important; }
 
-        /* 3. INPUTS, SELECTS E TEXTAREAS (CORREÇÃO DE LEGIBILIDADE) */
-        /* Força o fundo branco e a letra preta em todos os campos de escrita */
+        /* 3. INPUTS (BRANCO + LETRA PRETA) */
         .stTextInput input, .stTextArea textarea, .stSelectbox div[data-baseweb="select"] > div {
             background-color: #ffffff !important;
             color: #000000 !important;
-            border: 2px solid #cbd5e1 !important;
+            border: 2px solid #94a3b8 !important;
             border-radius: 8px !important;
             font-weight: bold !important;
         }
-        /* Cor do texto dentro do dropdown quando aberto */
-        ul[data-testid="stSelectboxVirtualDropdown"] li {
-            color: #000000 !important;
-            background-color: #ffffff !important;
-        }
-        /* Foco (Borda Azul) */
-        .stTextInput input:focus, .stTextArea textarea:focus {
-            border-color: #3b82f6 !important;
-            box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.5) !important;
-        }
+        /* Texto das opções do dropdown */
+        ul[data-testid="stSelectboxVirtualDropdown"] li { color: black !important; }
 
-        /* 4. BOTÕES DE REDES SOCIAIS (FLUTUANTES E SEM "CHAPA") */
-        /* Removemos o estilo de lista */
+        /* 4. BOTÕES REDES SOCIAIS (GRELHA PERFEITA) */
+        /* Forçar grid de 4 colunas e garantir alinhamento */
         div[role="radiogroup"] {
             display: grid;
-            grid-template-columns: repeat(4, 1fr); /* 4 colunas alinhadas */
+            grid-template-columns: repeat(4, 1fr);
             gap: 15px;
             width: 100%;
         }
-        
-        /* Esconde a bolinha do rádio */
+        @media (max-width: 600px) {
+            div[role="radiogroup"] { grid-template-columns: repeat(2, 1fr); }
+        }
+
+        /* Esconder a bolinha original do rádio */
         div[role="radiogroup"] label > div:first-child { display: none; }
-        
-        /* Estilo do Cartão (Unselected - Flutuante) */
+
+        /* Estilo do Cartão (Desligado) */
         div[role="radiogroup"] label {
-            background-color: rgba(30, 41, 59, 0.4); /* Fundo muito subtil */
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 12px;
-            height: 100px;
+            background-color: rgba(30, 41, 59, 0.6) !important;
+            border: 1px solid rgba(255, 255, 255, 0.1) !important;
+            border-radius: 12px !important;
+            height: 120px !important; /* MAIOR */
+            width: 100% !important;
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: flex-end;
-            padding-bottom: 10px;
+            padding-bottom: 15px;
             cursor: pointer;
-            transition: all 0.2s ease;
+            transition: all 0.2s;
             background-repeat: no-repeat;
-            background-position: center 20px; 
-            background-size: 45px; /* Ícone Grande */
-            color: #94a3b8 !important; /* Texto cinza claro quando inativo */
-            font-size: 0.8rem;
+            background-position: center 25px;
+            background-size: 50px; /* ÍCONE MAIOR */
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
         }
 
-        /* ÍCONES REAIS (Flaticon HD) */
-        div[role="radiogroup"] label:nth-of-type(1) { background-image: url('https://cdn-icons-png.flaticon.com/128/174/174855.png'); } /* Insta */
-        div[role="radiogroup"] label:nth-of-type(2) { background-image: url('https://cdn-icons-png.flaticon.com/128/3536/3536505.png'); } /* LinkedIn */
-        div[role="radiogroup"] label:nth-of-type(3) { background-image: url('https://cdn-icons-png.flaticon.com/128/3046/3046121.png'); } /* TikTok */
-        div[role="radiogroup"] label:nth-of-type(4) { background-image: url('https://cdn-icons-png.flaticon.com/128/5968/5968764.png'); } /* Facebook */
-        div[role="radiogroup"] label:nth-of-type(5) { background-image: url('https://cdn-icons-png.flaticon.com/128/1384/1384060.png'); } /* YouTube */
-        div[role="radiogroup"] label:nth-of-type(6) { background-image: url('https://cdn-icons-png.flaticon.com/128/5969/5969020.png'); background-size: 35px; } /* X */
-        div[role="radiogroup"] label:nth-of-type(7) { background-image: url('https://cdn-icons-png.flaticon.com/128/733/733585.png'); } /* WhatsApp */
-        div[role="radiogroup"] label:nth-of-type(8) { background-image: url('https://cdn-icons-png.flaticon.com/128/4922/4922073.png'); } /* Blog */
+        /* ÍCONES (MAPEAMENTO EXATO) */
+        div[role="radiogroup"] label:nth-child(1) { background-image: url('https://cdn-icons-png.flaticon.com/128/2111/2111463.png'); } /* Insta */
+        div[role="radiogroup"] label:nth-child(2) { background-image: url('https://cdn-icons-png.flaticon.com/128/174/174857.png'); } /* LinkedIn */
+        div[role="radiogroup"] label:nth-child(3) { background-image: url('https://cdn-icons-png.flaticon.com/128/3046/3046121.png'); background-size: 40px; } /* TikTok */
+        div[role="radiogroup"] label:nth-child(4) { background-image: url('https://cdn-icons-png.flaticon.com/128/5968/5968764.png'); } /* Facebook */
+        div[role="radiogroup"] label:nth-child(5) { background-image: url('https://cdn-icons-png.flaticon.com/128/1384/1384060.png'); } /* YouTube */
+        div[role="radiogroup"] label:nth-child(6) { background-image: url('https://cdn-icons-png.flaticon.com/128/5969/5969020.png'); background-size: 35px; } /* X */
+        div[role="radiogroup"] label:nth-child(7) { background-image: url('https://cdn-icons-png.flaticon.com/128/733/733585.png'); } /* WhatsApp */
+        div[role="radiogroup"] label:nth-child(8) { background-image: url('https://cdn-icons-png.flaticon.com/128/4922/4922073.png'); } /* Blog */
 
-        /* HOVER */
-        div[role="radiogroup"] label:hover {
-            background-color: rgba(255, 255, 255, 0.1);
-            transform: translateY(-5px);
-        }
-
-        /* SELECIONADO (DESTAQUE PROFISSIONAL) */
+        /* ESTADO SELECIONADO (DESTAQUE DOURADO/LARANJA) */
         div[role="radiogroup"] label[data-checked="true"] {
-            background-color: rgba(37, 99, 235, 0.2) !important;
-            border: 2px solid #3b82f6 !important;
-            box-shadow: 0 0 15px rgba(59, 130, 246, 0.4);
-            color: #ffffff !important;
-            font-weight: bold;
+            background-color: rgba(30, 58, 138, 0.4) !important;
+            border: 2px solid #f59e0b !important; /* BORDA LARANJA */
+            box-shadow: 0 0 20px rgba(245, 158, 11, 0.4) !important;
+            transform: scale(1.05);
+            z-index: 10;
         }
 
         /* 5. LIMPEZA */
         header[data-testid="stHeader"], #MainMenu, footer {display: none !important;}
         .block-container {padding-top: 2rem !important; padding-bottom: 5rem !important;}
         
-        /* 6. BOTÃO DE AÇÃO (CORRIGIDO) */
+        /* 6. BOTÃO GERAR (GRANDE E VISÍVEL) */
         .stButton button { 
-            width: 100%; border-radius: 12px; font-weight: 800; font-size: 1.1rem;
-            background: linear-gradient(90deg, #fbbf24, #d97706); /* Laranja Ouro */
-            color: black !important; border: none; padding: 0.9rem;
-            text-transform: uppercase;
+            width: 100%; border-radius: 12px; font-weight: 800; font-size: 1.2rem;
+            background: linear-gradient(90deg, #f59e0b, #d97706); /* Laranja Ouro */
+            color: black !important; border: none; padding: 1rem;
+            text-transform: uppercase; letter-spacing: 1px;
+            margin-top: 20px;
         }
+        .stButton button:hover { transform: scale(1.02); filter: brightness(1.1); }
     </style>
 """, unsafe_allow_html=True)
 
@@ -125,32 +110,35 @@ st.markdown("""
 LINK_DA_BASE_DE_DADOS = "https://docs.google.com/spreadsheets/d/e/2PACX-1vT_xyKHdsk9og2mRKE5uZBKcANNFtvx8wuUhR3a7gV-TFlZeSuU2wzJB_SjfkUKKIqVhh3LcaRr8Wn3/pub?gid=0&single=true&output=csv"
 LINK_TALLY = "https://tally.so/r/81qLVx"
 
-# --- MOTOR DE IA QUE NÃO FALHA (FALLBACK) ---
-def gerar_conteudo_robusto(prompt):
+# --- MOTOR DE IA ROBUSTO ---
+def gerar_conteudo_final(prompt):
+    # 1. Obter Chaves (Lista ou Única)
     keys = []
     if "GOOGLE_KEYS" in st.secrets: keys = st.secrets["GOOGLE_KEYS"]
     elif "GOOGLE_API_KEY" in st.secrets: keys = [st.secrets["GOOGLE_API_KEY"]]
     
-    if not keys: return None, "Sem chaves API."
+    if not keys: return None, "Chave API não configurada nos Secrets."
+    
+    # Baralhar para distribuir carga
     random.shuffle(keys)
     
-    # LISTA DE MODELOS (Se o Flash falhar, tenta o Pro, depois o antigo)
-    # Importante: 'gemini-pro' é o modelo v1.0 que é ultra estável e não dá erro 404
-    modelos = ["gemini-1.5-flash", "gemini-1.5-pro", "gemini-pro"]
+    # 2. Tentar Modelos (Do melhor para o mais antigo)
+    modelos = ["gemini-1.5-flash", "gemini-pro"]
     
-    for modelo_nome in modelos:
+    ultimo_erro = ""
+    
+    for modelo in modelos:
         for key in keys:
             try:
                 genai.configure(api_key=key)
-                model = genai.GenerativeModel(modelo_nome)
-                response = model.generate_content(prompt)
-                return response, None
+                model_ai = genai.GenerativeModel(modelo)
+                response = model_ai.generate_content(prompt)
+                return response, None # Sucesso
             except Exception as e:
-                # Se for erro 404 (Modelo não existe), sai do loop de chaves e muda de modelo
-                if "404" in str(e): break 
-                continue
+                ultimo_erro = str(e)
+                continue # Tenta a próxima chave/modelo
                 
-    return None, "Todos os modelos falharam. Verifique a API Key."
+    return None, f"Falha total. Último erro: {ultimo_erro}"
 
 # --- RASTREAMENTO IP ---
 @st.cache_resource
@@ -187,7 +175,7 @@ def get_current_date():
     h = datetime.now()
     return f"{h.day} de {meses[h.month]} de {h.year}"
 
-# --- LOGIN ---
+# --- LOGIN (CORRIGIDO) ---
 def check_login():
     if "user_type" not in st.session_state: st.session_state.user_type = None
     if st.session_state.user_type: return True
@@ -197,25 +185,30 @@ def check_login():
     
     st.markdown("### 🔒 Login Luso-IA")
     
-    tab1, tab2 = st.tabs(["🔑 Entrar", "🎁 Testar"])
+    tab1, tab2 = st.tabs(["🔑 Entrar (Pro)", "🎁 Testar (Grátis)"])
     
     with tab1:
         with st.form("login_form"):
             email = st.text_input("Email:")
             senha = st.text_input("Senha:", type="password")
             if st.form_submit_button("Entrar"):
-                try:
-                    if st.secrets["clientes"]["admin"] == senha:
-                        st.session_state.user_type = "PRO"
-                        st.session_state.user_email = "Admin"
-                        st.rerun()
-                except: pass
+                # 1. LOGIN ADMIN (Prioridade Máxima)
+                if senha == "SOU-O-DONO":
+                    st.session_state.user_type = "PRO"
+                    st.session_state.user_email = "Admin"
+                    st.success("⚡ Modo Dono Ativo!")
+                    time.sleep(0.5)
+                    st.rerun()
+
+                # 2. LOGIN CLIENTES
                 clientes = carregar_clientes()
                 if email in clientes and clientes[email] == senha:
                     st.session_state.user_type = "PRO"
                     st.session_state.user_email = email
                     st.rerun()
-                else: st.error("Dados incorretos.")
+                else:
+                    st.error("Dados incorretos.")
+                    st.caption("Se subscreveu agora, aguarde 1 minuto.")
     
     with tab2:
         usos_atuais = usage_tracker.get(user_ip, 0)
@@ -248,11 +241,11 @@ if check_login():
                 st.stop()
             else: st.warning(f"⚠️ Demo: {restantes} restantes")
 
-    # --- SELETOR DE REDES (FLUTUANTES) ---
+    # --- SELETOR DE REDES (Cartões Flutuantes) ---
     st.write("### 📢 Publicar onde?")
     
     rede_escolhida = st.radio(
-        "Selecione:",
+        "Selecione a plataforma:",
         ["Instagram", "LinkedIn", "TikTok", "Facebook", "YouTube", "Twitter", "WhatsApp", "Blog"],
         horizontal=True,
         label_visibility="collapsed"
@@ -284,15 +277,18 @@ if check_login():
         with st.spinner("A escrever..."):
             prompt = f"""
             Data Atual: {data_hoje}.
-            Atua como Copywriter Sénior. País: {pais}. Rede: {rede_escolhida}. Tom: {tom}. 
+            Atua como Copywriter Sénior da Luso-IA.
+            País: {pais}. Rede: {rede_escolhida}. Tom: {tom}. 
             Negócio: {negocio}. Tópico: {tema}. 
+            Objetivo: Criar conteúdo focado em vendas e cultura local.
             """
             
-            response, erro = gerar_conteudo_robusto(prompt)
+            response, erro = gerar_conteudo_final(prompt)
             if response:
                 st.markdown(response.text)
             else:
                 st.error(f"⚠️ Erro IA: {erro}")
+                st.warning("Verifique a sua API Key da Google.")
 
         # 2. IMAGEM
         with st.spinner("A preparar imagens..."):
@@ -301,22 +297,21 @@ if check_login():
                 clean_keywords = f"{negocio} {tema}"
                 try:
                     if response:
-                        vis_resp, _ = gerar_conteudo_robusto(f"Identify 3 English keywords for a stock photo about: '{negocio} {tema}' in {pais}. Output ONLY the 3 words.")
+                        vis_resp, _ = gerar_conteudo_final(f"Identify 3 English keywords for a stock photo about: '{negocio} {tema}' in {pais}. Output ONLY the 3 words.")
                         if vis_resp: clean_keywords = vis_resp.text.strip()
                 except: pass
                 
-                # A. Imagem IA (Segura)
+                # A. Imagem IA (Pollinations)
                 seed = random.randint(1, 999999)
                 prompt_img = f"Professional product photography of {clean_keywords}, {pais} aesthetic, cinematic lighting, 4k, photorealistic, no text, object focused, no people"
                 prompt_clean = urllib.parse.quote(prompt_img)
                 url_img = f"https://image.pollinations.ai/prompt/{prompt_clean}?width=1024&height=1024&model=flux&seed={seed}&nologo=true"
                 st.image(url_img, caption="Imagem Gerada (IA)")
-                st.caption("⚠️ Nota: Imagem meramente ilustrativa.")
                 
                 # B. Link Unsplash
                 termo_safe = re.sub(r'[^\w\s]', '', clean_keywords).strip().replace(" ", "-")
                 if not termo_safe: termo_safe = "business"
-                st.markdown(f"<a href='https://unsplash.com/s/photos/{termo_safe}' target='_blank'><button style='width:100%;padding:10px;border-radius:8px;border:1px solid #334155;background:#1e293b;color:white;cursor:pointer;font-weight:bold;margin-top:10px;'>🔍 Ver fotos reais no Unsplash</button></a>", unsafe_allow_html=True)
+                st.markdown(f"<a href='https://unsplash.com/s/photos/{termo_safe}' target='_blank'><button style='width:100%;padding:10px;border-radius:8px;border:1px solid #334155;background:#1e293b;color:white;cursor:pointer;font-weight:bold;margin-top:10px;'>🔍 Ver fotos reais no Unsplash (Backup)</button></a>", unsafe_allow_html=True)
             except: pass
 
     st.markdown("<br><br>", unsafe_allow_html=True)
