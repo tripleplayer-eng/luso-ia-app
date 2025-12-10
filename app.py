@@ -17,115 +17,107 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# --- CSS DE DESIGN DE ELITE (LOGÓTIPOS REAIS) ---
+# --- CSS DE CORREÇÃO VISUAL (Tamanho Fixo + Remoção de Rodapé) ---
 st.markdown("""
     <style>
-        /* 1. FUNDO PRETO ABSOLUTO */
+        /* 1. FUNDO PRETO */
         .stApp { background-color: #000000; }
         
-        /* 2. TEXTOS */
-        h1, h2, h3, p, label, div, span { color: #e2e8f0 !important; }
-
-        /* 3. INPUTS (BRANCO + PRETO) */
+        /* 2. REMOVER RODAPÉ E BARRA DO STREAMLIT (Código Reforçado) */
+        header {visibility: hidden; height: 0px;}
+        footer {visibility: hidden; display: none;}
+        #MainMenu {visibility: hidden; display: none;}
+        .stDeployButton {display: none;}
+        [data-testid="stDecoration"] {display: none;}
+        [data-testid="stStatusWidget"] {display: none;}
+        /* Remove a barra branca de baixo */
+        .viewerBadge-container {display: none !important;} 
+        
+        /* 3. INPUTS (Legibilidade) */
         .stTextInput input, .stTextArea textarea, .stSelectbox div[data-baseweb="select"] > div {
             background-color: #ffffff !important;
             color: #000000 !important;
-            border: 2px solid #333 !important;
-            border-radius: 12px !important;
+            border: 1px solid #333 !important;
+            border-radius: 8px !important;
             font-weight: 600 !important;
         }
         ul[data-testid="stSelectboxVirtualDropdown"] li {
             background-color: #ffffff !important;
             color: #000000 !important;
         }
+        h1, h2, h3, p, label, span, div { color: #e2e8f0 !important; }
 
-        /* 4. GRELHA DE REDES SOCIAIS (A MAGIA ACONTECE AQUI) */
-        
-        /* Configura a Grelha */
+        /* 4. GRELHA DE REDES SOCIAIS (CORREÇÃO DO ESMAGAMENTO) */
         div[role="radiogroup"] {
-            display: grid;
-            grid-template-columns: repeat(4, 1fr); /* 4 Ícones por linha */
-            gap: 15px;
-            width: 100%;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 10px;
         }
-        @media (max-width: 600px) {
-            div[role="radiogroup"] { grid-template-columns: repeat(2, 1fr); } /* 2 no telemóvel */
-        }
-
-        /* Esconde a bolinha e o texto original */
+        
+        /* Esconde a bolinha */
         div[role="radiogroup"] label > div:first-child { display: none; }
-        div[role="radiogroup"] label p { display: none; } 
 
-        /* Estilo Base do Botão (Cartão Escuro) */
+        /* ESTILO DO CARTÃO - FORÇAR LARGURA MÍNIMA */
         div[role="radiogroup"] label {
             background-color: #111111 !important;
             border: 1px solid #333 !important;
-            border-radius: 16px !important;
-            height: 90px !important; /* Altura do botão */
-            width: 100% !important;
+            border-radius: 12px !important;
+            width: 75px !important;       /* Largura Fixa */
+            height: 75px !important;      /* Altura Fixa */
+            min-width: 75px !important;   /* Impede esmagamento */
+            display: flex !important;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
             cursor: pointer;
             transition: all 0.2s;
             margin: 0 !important;
-            padding: 0 !important;
-            /* Preparar para receber a imagem */
+            /* Ícone no centro */
             background-repeat: no-repeat;
             background-position: center;
-            background-size: 50px; /* Tamanho do Logótipo */
-            opacity: 0.6; /* Ligeiramente apagado quando inativo */
+            background-size: 40px; 
+            opacity: 0.7;
         }
 
-        /* --- INJEÇÃO DOS LOGÓTIPOS (UM POR UM) --- */
-        /* A ordem aqui tem de ser igual à lista no Python lá em baixo */
-        
-        /* 1. Instagram */
-        div[role="radiogroup"] label:nth-of-type(1) { background-image: url('https://cdn-icons-png.flaticon.com/512/2111/2111463.png'); }
-        /* 2. LinkedIn */
-        div[role="radiogroup"] label:nth-of-type(2) { background-image: url('https://cdn-icons-png.flaticon.com/512/174/174857.png'); }
-        /* 3. TikTok */
-        div[role="radiogroup"] label:nth-of-type(3) { background-image: url('https://cdn-icons-png.flaticon.com/512/3046/3046121.png'); background-size: 45px !important; }
-        /* 4. Facebook */
-        div[role="radiogroup"] label:nth-of-type(4) { background-image: url('https://cdn-icons-png.flaticon.com/512/5968/5968764.png'); }
-        /* 5. YouTube */
-        div[role="radiogroup"] label:nth-of-type(5) { background-image: url('https://cdn-icons-png.flaticon.com/512/1384/1384060.png'); }
-        /* 6. Twitter/X */
-        div[role="radiogroup"] label:nth-of-type(6) { background-image: url('https://cdn-icons-png.flaticon.com/512/5969/5969020.png'); background-size: 40px !important; }
-        /* 7. WhatsApp */
-        div[role="radiogroup"] label:nth-of-type(7) { background-image: url('https://cdn-icons-png.flaticon.com/512/733/733585.png'); }
-        /* 8. Blog */
-        div[role="radiogroup"] label:nth-of-type(8) { background-image: url('https://cdn-icons-png.flaticon.com/512/4922/4922073.png'); }
-
-        /* HOVER (Passar o rato) */
-        div[role="radiogroup"] label:hover {
-            opacity: 1;
-            transform: scale(1.05);
-            background-color: #1a1a1a !important;
-            border-color: #555 !important;
+        /* TEXTO DO RÁDIO (Esconder texto para mostrar só imagem) */
+        div[role="radiogroup"] label p {
+            display: none !important;
         }
 
-        /* SELECIONADO (O Botão Ativo) */
+        /* --- ÍCONES (ORDEM EXATA) --- */
+        div[role="radiogroup"] label:nth-child(1) { background-image: url('https://cdn-icons-png.flaticon.com/128/3955/3955024.png'); } /* Insta */
+        div[role="radiogroup"] label:nth-child(2) { background-image: url('https://cdn-icons-png.flaticon.com/128/145/145807.png'); } /* LinkedIn */
+        div[role="radiogroup"] label:nth-child(3) { background-image: url('https://cdn-icons-png.flaticon.com/128/3670/3670151.png'); background-size: 35px !important; } /* X */
+        div[role="radiogroup"] label:nth-child(4) { background-image: url('https://cdn-icons-png.flaticon.com/128/3046/3046121.png'); background-size: 35px !important; } /* TikTok */
+        div[role="radiogroup"] label:nth-child(5) { background-image: url('https://cdn-icons-png.flaticon.com/128/3670/3670147.png'); } /* YouTube */
+        div[role="radiogroup"] label:nth-child(6) { background-image: url('https://cdn-icons-png.flaticon.com/128/3670/3670127.png'); } /* Facebook */
+        div[role="radiogroup"] label:nth-child(7) { background-image: url('https://cdn-icons-png.flaticon.com/128/3670/3670051.png'); } /* WhatsApp */
+        div[role="radiogroup"] label:nth-child(8) { background-image: url('https://cdn-icons-png.flaticon.com/128/10024/10024225.png'); } /* Blog */
+
+        /* ESTADO SELECIONADO (Borda Azul + Opacidade Total) */
         div[role="radiogroup"] label[data-checked="true"] {
-            opacity: 1;
-            background-color: rgba(37, 99, 235, 0.2) !important; /* Fundo Azulado */
-            border: 2px solid #2563eb !important; /* Borda Azul Viva */
-            box-shadow: 0 0 20px rgba(37, 99, 235, 0.4);
+            background-color: rgba(37, 99, 235, 0.2) !important;
+            border: 2px solid #2563eb !important;
+            box-shadow: 0 0 10px rgba(37, 99, 235, 0.5);
+            opacity: 1 !important;
             transform: scale(1.05);
         }
-
-        /* 5. LIMPEZA TOTAL */
-        header[data-testid="stHeader"] {display: none;}
-        #MainMenu {display: none;}
-        footer {display: none;}
-        .block-container {padding-top: 1rem !important; padding-bottom: 5rem !important;}
         
-        /* 6. BOTÃO GERAR (OURO) */
+        div[role="radiogroup"] label:hover {
+            border-color: #555 !important;
+            opacity: 1;
+        }
+
+        /* 5. BOTÃO GERAR */
         .stButton button { 
             width: 100%; border-radius: 12px; font-weight: 800; font-size: 1.2rem;
             background: linear-gradient(90deg, #f59e0b, #d97706); 
             color: black !important; border: none; padding: 1rem;
             text-transform: uppercase; letter-spacing: 1px;
-            margin-top: 20px;
+            margin-top: 15px;
         }
-        .stButton button:hover { transform: scale(1.02); filter: brightness(1.1); }
+        .block-container {padding-top: 2rem !important; padding-bottom: 5rem !important;}
     </style>
 """, unsafe_allow_html=True)
 
@@ -133,7 +125,7 @@ st.markdown("""
 LINK_DA_BASE_DE_DADOS = "https://docs.google.com/spreadsheets/d/e/2PACX-1vT_xyKHdsk9og2mRKE5uZBKcANNFtvx8wuUhR3a7gV-TFlZeSuU2wzJB_SjfkUKKIqVhh3LcaRr8Wn3/pub?gid=0&single=true&output=csv"
 LINK_TALLY = "https://tally.so/r/81qLVx"
 
-# --- MOTOR DE IA (SOLUÇÃO ROBUSTA) ---
+# --- MOTOR DE IA ---
 def gerar_conteudo_final(prompt):
     keys = []
     if "GOOGLE_KEYS" in st.secrets: keys = st.secrets["GOOGLE_KEYS"]
@@ -142,10 +134,8 @@ def gerar_conteudo_final(prompt):
     if not keys: return None, "Chave API não configurada."
     random.shuffle(keys)
     
-    # 1. Tenta o Flash (Mais rápido)
-    # 2. Se falhar (404), tenta o Pro (Mais inteligente)
-    # 3. Se falhar, tenta o Pro 1.0 (Mais antigo e estável)
-    modelos = ["gemini-1.5-flash", "gemini-1.5-pro", "gemini-pro"]
+    # Lista de modelos
+    modelos = ["gemini-1.5-flash", "gemini-pro"]
     
     for modelo in modelos:
         for key in keys:
@@ -155,12 +145,10 @@ def gerar_conteudo_final(prompt):
                 response = model_ai.generate_content(prompt)
                 return response, None
             except Exception as e:
-                # Se o modelo não existe, muda de modelo imediatamente
                 if "404" in str(e): break 
-                # Se for outro erro (ex: quota), tenta outra chave
                 continue
                 
-    return None, "Erro de conexão. Tente novamente."
+    return None, "Erro de conexão à Google."
 
 # --- RASTREAMENTO IP ---
 @st.cache_resource
@@ -213,10 +201,14 @@ def check_login():
             email = st.text_input("Email:")
             senha = st.text_input("Senha:", type="password")
             if st.form_submit_button("Entrar"):
-                if senha == "SOU-O-DONO":
-                    st.session_state.user_type = "PRO"
-                    st.session_state.user_email = "Admin"
-                    st.rerun()
+                try:
+                    if st.secrets["clientes"]["admin"] == senha:
+                        st.session_state.user_type = "PRO"
+                        st.session_state.user_email = "Admin"
+                        st.success("Admin")
+                        time.sleep(0.5)
+                        st.rerun()
+                except: pass
                 clientes = carregar_clientes()
                 if email in clientes and clientes[email] == senha:
                     st.session_state.user_type = "PRO"
@@ -255,15 +247,20 @@ if check_login():
                 st.stop()
             else: st.warning(f"⚠️ Demo: {restantes} restantes")
 
-    # --- SELETOR DE REDES (COM LOGÓTIPOS REAIS) ---
+    try:
+        if "GOOGLE_KEYS" not in st.secrets and "GOOGLE_API_KEY" not in st.secrets:
+             st.error("Erro configuração chaves.")
+             st.stop()
+    except: pass
+
+    # --- SELETOR DE REDES (RÁDIO CSS PURO) ---
     st.write("### 📢 Escolha a Plataforma")
     
-    # Esta lista alimenta o CSS. A ordem tem de ser igual à do CSS lá em cima!
-    # O label_visibility="collapsed" esconde os nomes "Instagram", "LinkedIn", etc.
-    # Os nomes ficam invisíveis, só se vêem as imagens de fundo que o CSS põe.
+    # Ordem EXATA para o CSS:
+    # 1.Insta 2.Link 3.X 4.TikTok 5.YouTube 6.FB 7.Whats 8.Blog
     rede_escolhida = st.radio(
         "Selecione:",
-        ["Instagram", "LinkedIn", "TikTok", "Facebook", "YouTube", "Twitter", "WhatsApp", "Blog"],
+        ["Instagram", "LinkedIn", "X (Twitter)", "TikTok", "YouTube", "Facebook", "WhatsApp", "Blog"],
         horizontal=True,
         label_visibility="collapsed"
     )
@@ -305,7 +302,6 @@ if check_login():
                 st.markdown(response.text)
             else:
                 st.error(f"⚠️ Erro IA: {erro}")
-                st.button("Tentar Novamente", on_click=st.rerun)
 
         # 2. IMAGEM
         with st.spinner("A preparar imagens..."):
