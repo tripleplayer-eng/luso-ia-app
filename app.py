@@ -5,28 +5,68 @@ from streamlit_image_select import image_select
 import time
 import random
 import urllib.parse
-import re  # NOVO: Para limpar emojis e símbolos
+import re
 from datetime import datetime
 from streamlit import runtime
 from streamlit.runtime.scriptrunner import get_script_run_ctx
 from google.api_core import exceptions
 
 # --- CONFIGURAÇÃO ---
-st.set_page_config(page_title="Luso-IA", page_icon="🇵🇹", layout="centered", initial_sidebar_state="collapsed")
+st.set_page_config(
+    page_title="Luso-IA", 
+    page_icon="🇵🇹", 
+    layout="centered",
+    initial_sidebar_state="collapsed"
+)
 
-# --- CSS ---
+# --- CSS DARK MODE & DESIGN MODERNO ---
 st.markdown("""
     <style>
+        /* 1. FUNDO ESCURO (Igual ao Site) */
+        [data-testid="stAppViewContainer"] {
+            background-color: #020617;
+            background-image: radial-gradient(rgba(255,255,255,0.05) 1px, transparent 1px);
+            background-size: 30px 30px;
+        }
+        
+        /* 2. TEXTOS */
+        h1, h2, h3, p, label, .stMarkdown {
+            color: #e2e8f0 !important;
+            font-family: 'Source Sans Pro', sans-serif;
+        }
+        
+        /* 3. INPUTS E CAIXAS (Estilo Glass Dark) */
+        .stTextInput input, .stTextArea textarea, .stSelectbox div[data-baseweb="select"] {
+            background-color: #0f172a !important;
+            color: white !important;
+            border: 1px solid #1e293b !important;
+            border-radius: 10px !important;
+        }
+        .stTextInput input:focus, .stTextArea textarea:focus {
+            border-color: #2563eb !important;
+            box-shadow: 0 0 0 1px #2563eb !important;
+        }
+        
+        /* 4. REMOVER ELEMENTOS STREAMLIT */
         header[data-testid="stHeader"] {visibility: hidden; height: 0px;}
         #MainMenu {visibility: hidden; display: none;}
         footer {visibility: hidden; display: none;}
-        .block-container {padding-top: 1rem !important; padding-bottom: 5rem !important;}
+        .block-container {padding-top: 2rem !important; padding-bottom: 5rem !important;}
+        
+        /* 5. BOTÕES VIBRANTES */
         .stButton button { 
             width: 100%; border-radius: 12px; font-weight: 600; 
             background: linear-gradient(90deg, #2563eb, #4f46e5); color: white; border: none; padding: 0.8rem;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            box-shadow: 0 4px 15px rgba(37, 99, 235, 0.3); transition: all 0.3s;
         }
-        .stButton button:hover { transform: scale(1.02); box-shadow: 0 6px 12px rgba(0,0,0,0.15); }
+        .stButton button:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(37, 99, 235, 0.5); }
+
+        /* 6. MENSAGENS DE SUCESSO/ERRO */
+        .stSuccess, .stInfo, .stWarning, .stError {
+            background-color: #0f172a !important;
+            color: white !important;
+            border: 1px solid #334155 !important;
+        }
     </style>
 """, unsafe_allow_html=True)
 
@@ -34,44 +74,9 @@ st.markdown("""
 LINK_DA_BASE_DE_DADOS = "https://docs.google.com/spreadsheets/d/e/2PACX-1vT_xyKHdsk9og2mRKE5uZBKcANNFtvx8wuUhR3a7gV-TFlZeSuU2wzJB_SjfkUKKIqVhh3LcaRr8Wn3/pub?gid=0&single=true&output=csv"
 LINK_TALLY = "https://tally.so/r/81qLVx"
 
-# --- MOTOR DE IA INTELIGENTE ---
-def get_best_model():
-    try:
-        models = [m.name.replace('models/', '') for m in genai.list_models() if 'generateContent' in m.supported_generation_methods]
-        for m in ["gemini-1.5-flash", "gemini-1.5-pro", "gemini-1.0-pro", "gemini-pro"]:
-            if m in models: return m
-        return models[0] if models else "gemini-pro"
-    except: return "gemini-pro"
+# --- FUNÇÕES DE SEGURANÇA E MOTOR ---
+MODELO_ESTAVEL = "gemini-1.5-flash"
 
-def gerar_conteudo_blindado(prompt):
-    keys = []
-    if "GOOGLE_KEYS" in st.secrets: keys = st.secrets["GOOGLE_KEYS"]
-    elif "GOOGLE_API_KEY" in st.secrets: keys = [st.secrets["GOOGLE_API_KEY"]]
-    
-    if not keys: return None, "Sem chaves"
-    random.shuffle(keys)
-    
-    last_error = ""
-    for key in keys:
-        try:
-            genai.configure(api_key=key)
-            model_name = get_best_model()
-            model = genai.GenerativeModel(model_name)
-            response = model.generate_content(prompt)
-            return response, None
-        except Exception as e:
-            last_error = str(e)
-            continue
-    return None, last_error
-
-# --- LIMPEZA DE TEXTO (NOVO) ---
-def limpar_para_url(texto):
-    """Remove emojis e caracteres estranhos para o Unsplash não dar erro"""
-    # Remove tudo o que não for letra, número ou espaço
-    texto_limpo = re.sub(r'[^\w\s]', '', texto)
-    return urllib.parse.quote(texto_limpo.strip())
-
-# --- RASTREAMENTO IP ---
 @st.cache_resource
 def get_usage_tracker(): return {}
 
@@ -89,7 +94,6 @@ def get_remote_ip():
 usage_tracker = get_usage_tracker()
 user_ip = get_remote_ip()
 
-# --- CARREGAR CLIENTES ---
 @st.cache_data(ttl=60)
 def carregar_clientes():
     try:
@@ -102,11 +106,31 @@ def carregar_clientes():
         return {}
     except: return {}
 
-# --- DATA ---
 def get_current_date():
     meses = {1:'Janeiro', 2:'Fevereiro', 3:'Março', 4:'Abril', 5:'Maio', 6:'Junho', 7:'Julho', 8:'Agosto', 9:'Setembro', 10:'Outubro', 11:'Novembro', 12:'Dezembro'}
     hoje = datetime.now()
     return f"{hoje.day} de {meses[hoje.month]} de {hoje.year}"
+
+# --- FUNÇÃO DE ROTAÇÃO DE CHAVES ---
+def gerar_conteudo_seguro(prompt):
+    keys = []
+    if "GOOGLE_KEYS" in st.secrets: keys = st.secrets["GOOGLE_KEYS"]
+    elif "GOOGLE_API_KEY" in st.secrets: keys = [st.secrets["GOOGLE_API_KEY"]]
+    
+    if not keys: return None
+    random.shuffle(keys)
+    
+    for key in keys:
+        try:
+            genai.configure(api_key=key)
+            model = genai.GenerativeModel(MODELO_ESTAVEL)
+            response = model.generate_content(prompt)
+            return response
+        except exceptions.ResourceExhausted:
+            continue
+        except:
+            continue
+    return None
 
 # --- LOGIN ---
 def check_login():
@@ -117,6 +141,7 @@ def check_login():
     except: pass
     
     st.markdown("### 🔒 Login Luso-IA")
+    
     tab1, tab2 = st.tabs(["🔑 Entrar", "🎁 Testar"])
     
     with tab1:
@@ -169,11 +194,12 @@ if check_login():
             else: st.warning(f"⚠️ Demo: {restantes} restantes")
 
     try:
-        # Verificação silenciosa de chaves
-        if "GOOGLE_KEYS" not in st.secrets and "GOOGLE_API_KEY" not in st.secrets:
-             st.error("Erro configuração chaves.")
-             st.stop()
-    except: pass
+        # Config inicial simples para garantir que não cracha
+        if "GOOGLE_KEYS" in st.secrets: genai.configure(api_key=st.secrets["GOOGLE_KEYS"][0])
+        elif "GOOGLE_API_KEY" in st.secrets: genai.configure(api_key=st.secrets["GOOGLE_API_KEY"])
+    except:
+        st.error("Erro: API Key em falta.")
+        st.stop()
 
     st.write("### Publicar onde?")
     rede_selecionada = image_select(
@@ -212,7 +238,7 @@ if check_login():
             else: st.rerun()
 
         rede_nome = "Rede Social"
-        # Mapeamento simplificado
+        # ... (lógica de ícones simplificada para poupar espaço)
         if "2111463" in rede_selecionada: rede_nome = "Instagram"
         elif "174857" in rede_selecionada: rede_nome = "LinkedIn"
         elif "5968764" in rede_selecionada: rede_nome = "Facebook"
@@ -233,49 +259,48 @@ if check_login():
             Objetivo: Criar conteúdo focado em vendas e cultura local.
             """
             
-            response, erro = gerar_conteudo_blindado(prompt)
+            response = gerar_conteudo_seguro(prompt)
             if response:
                 st.markdown(response.text)
             else:
-                st.error(f"⚠️ Erro IA: {erro}")
+                st.error("⚠️ O sistema está a receber muitos pedidos. Tente novamente em 10 segundos.")
 
         # 2. IMAGEM
         with st.spinner("A preparar imagens..."):
-            
-            # Tentar obter Keywords em Inglês Limpo
-            clean_keywords = ""
             try:
-                if response:
-                    prompt_visual = f"Output 3 simple English keywords for stock photo: '{negocio} {tema}'. No text. No chat."
-                    vis_resp, _ = gerar_conteudo_blindado(prompt_visual)
-                    if vis_resp: clean_keywords = vis_resp.text.strip()
-            except: pass
-            
-            # Fallback seguro se a IA falhar
-            if not clean_keywords: clean_keywords = f"{negocio} business"
-            
-            # A. Imagem IA (Pollinations)
-            try:
+                # Prompt Visual
+                prompt_visual = f"Identify 3 English keywords for a stock photo about: '{negocio} {tema}' in {pais}. Output ONLY the 3 words. No intro."
+                visual_response = gerar_conteudo_seguro(prompt_visual)
+                
+                clean_keywords = ""
+                if visual_response:
+                    clean_keywords = visual_response.text.strip()
+                
+                # Fallback se a IA falhar
+                if not clean_keywords: clean_keywords = f"{negocio} business"
+
+                # A. Imagem IA (Pollinations)
                 seed = random.randint(1, 999999)
                 prompt_img = f"Professional product photography of {clean_keywords}, {pais} aesthetic, cinematic lighting, 4k, photorealistic, no text, object focused, no people"
-                prompt_encoded = urllib.parse.quote(prompt_img)
-                url_img = f"https://image.pollinations.ai/prompt/{prompt_encoded}?width=1024&height=1024&model=flux&seed={seed}&nologo=true"
+                prompt_clean = urllib.parse.quote(prompt_img)
+                url_img = f"https://image.pollinations.ai/prompt/{prompt_clean}?width=1024&height=1024&model=flux&seed={seed}&nologo=true"
                 st.image(url_img, caption="Imagem Gerada (IA)")
+                
+                # B. Link Unsplash (LIMPEZA AGRESSIVA)
+                # Remove tudo o que não for letra ou número
+                termo_super_limpo = re.sub(r'[^a-zA-Z0-9\s]', '', clean_keywords)
+                # Substitui espaços por hífens (o Unsplash gosta disto)
+                termo_url = termo_super_limpo.strip().replace(" ", "-")
+                
+                st.markdown(f"""
+                    <a href="https://unsplash.com/s/photos/{termo_url}" target="_blank" style="text-decoration:none;">
+                        <button style="width:100%;padding:10px;border-radius:8px;border:1px solid #334155;background:#1e293b;color:white;cursor:pointer;font-weight:bold;margin-top:10px;">
+                            🔍 Ver fotos reais no Unsplash (Backup)
+                        </button>
+                    </a>
+                """, unsafe_allow_html=True)
+
             except: pass
 
-            # B. Link Unsplash (LIMPO E SEGURO)
-            # Função de limpeza remove emojis e caracteres especiais
-            termo_safe = limpar_para_url(clean_keywords)
-            # Se o termo ficar vazio, usa 'business' por defeito
-            if not termo_safe: termo_safe = "business"
-            
-            st.markdown(f"""
-                <a href="https://unsplash.com/s/photos/{termo_safe}" target="_blank" style="text-decoration:none;">
-                    <button style="width:100%;padding:10px;border-radius:8px;border:1px solid #ccc;background:white;color:#333;cursor:pointer;font-weight:bold;">
-                        🔍 Ver fotos reais no Unsplash (Backup)
-                    </button>
-                </a>
-            """, unsafe_allow_html=True)
-
     st.markdown("<br><br>", unsafe_allow_html=True)
-    st.markdown(f"<div style='text-align: center; color: #ccc; font-size: 0.8rem;'>Luso-IA • {pais.split(' ')[1]}</div>", unsafe_allow_html=True)
+    st.markdown(f"<div style='text-align: center; color: #64748b; font-size: 0.8rem;'>Luso-IA • {pais.split(' ')[1]}</div>", unsafe_allow_html=True)
