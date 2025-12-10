@@ -17,100 +17,107 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# --- CSS PREMIUM (VISUAL ALINHADO & CONTRASTE) ---
+# --- CSS DE CORREÇÃO VISUAL (TEXTO PRETO EM FUNDO BRANCO) ---
 st.markdown("""
     <style>
-        /* 1. FUNDO */
-        [data-testid="stAppViewContainer"] { background-color: #020617; }
-        h1, h2, h3, p, label, .stMarkdown, div { color: #e2e8f0 !important; }
+        /* 1. FUNDO GERAL ESCURO */
+        .stApp {
+            background-color: #020617;
+        }
+        
+        /* 2. TEXTOS GERAIS (Títulos e Labels) */
+        h1, h2, h3, p, label, .stMarkdown {
+            color: #ffffff !important;
+        }
 
-        /* 2. INPUTS (BRANCO COM LETRA PRETA) */
+        /* 3. INPUTS, SELECTS E TEXTAREAS (CORREÇÃO DE LEGIBILIDADE) */
+        /* Força o fundo branco e a letra preta em todos os campos de escrita */
         .stTextInput input, .stTextArea textarea, .stSelectbox div[data-baseweb="select"] > div {
             background-color: #ffffff !important;
-            color: #000000 !important; /* TEXTO PRETO */
-            font-weight: 600 !important;
-            border: 2px solid #cbd5e1 !important;
-            border-radius: 10px !important;
-        }
-        /* Corrigir a cor do texto dentro dos Selects */
-        .stSelectbox div[data-baseweb="select"] span {
             color: #000000 !important;
+            border: 2px solid #cbd5e1 !important;
+            border-radius: 8px !important;
+            font-weight: bold !important;
         }
-        /* Foco */
-        .stTextInput input:focus, .stTextArea textarea:focus, .stSelectbox div[data-baseweb="select"] > div:focus-within {
-            border-color: #2563eb !important;
-            box-shadow: 0 0 0 3px rgba(37,99,235,0.3) !important;
+        /* Cor do texto dentro do dropdown quando aberto */
+        ul[data-testid="stSelectboxVirtualDropdown"] li {
+            color: #000000 !important;
+            background-color: #ffffff !important;
         }
-        
-        /* 3. BOTÕES SOCIAIS (ALINHADOS E DESTACADOS) */
+        /* Foco (Borda Azul) */
+        .stTextInput input:focus, .stTextArea textarea:focus {
+            border-color: #3b82f6 !important;
+            box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.5) !important;
+        }
+
+        /* 4. BOTÕES DE REDES SOCIAIS (FLUTUANTES E SEM "CHAPA") */
+        /* Removemos o estilo de lista */
         div[role="radiogroup"] {
             display: grid;
-            grid-template-columns: repeat(4, 1fr); /* 4 por linha */
-            gap: 10px;
-            width: 100%; /* Ocupa a largura toda */
+            grid-template-columns: repeat(4, 1fr); /* 4 colunas alinhadas */
+            gap: 15px;
+            width: 100%;
         }
-        @media (max-width: 600px) {
-            div[role="radiogroup"] { grid-template-columns: repeat(2, 1fr); }
-        }
-
-        /* Estilo Base do Cartão */
+        
+        /* Esconde a bolinha do rádio */
+        div[role="radiogroup"] label > div:first-child { display: none; }
+        
+        /* Estilo do Cartão (Unselected - Flutuante) */
         div[role="radiogroup"] label {
-            background-color: rgba(255, 255, 255, 0.05);
-            border: 1px solid rgba(255, 255, 255, 0.15);
+            background-color: rgba(30, 41, 59, 0.4); /* Fundo muito subtil */
+            border: 1px solid rgba(255, 255, 255, 0.1);
             border-radius: 12px;
-            cursor: pointer;
-            transition: all 0.2s ease;
             height: 100px;
             display: flex;
-            align-items: flex-end;
-            justify-content: center;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-end;
             padding-bottom: 10px;
+            cursor: pointer;
+            transition: all 0.2s ease;
             background-repeat: no-repeat;
             background-position: center 20px; 
-            background-size: 40px; 
-            color: #cbd5e1 !important;
+            background-size: 45px; /* Ícone Grande */
+            color: #94a3b8 !important; /* Texto cinza claro quando inativo */
             font-size: 0.8rem;
-            font-weight: bold;
         }
-        div[role="radiogroup"] label > div:first-child { display: none; }
 
-        /* ÍCONES */
+        /* ÍCONES REAIS (Flaticon HD) */
         div[role="radiogroup"] label:nth-of-type(1) { background-image: url('https://cdn-icons-png.flaticon.com/128/174/174855.png'); } /* Insta */
         div[role="radiogroup"] label:nth-of-type(2) { background-image: url('https://cdn-icons-png.flaticon.com/128/3536/3536505.png'); } /* LinkedIn */
-        div[role="radiogroup"] label:nth-of-type(3) { background-image: url('https://cdn-icons-png.flaticon.com/128/3046/3046121.png'); background-size: 35px; } /* TikTok */
+        div[role="radiogroup"] label:nth-of-type(3) { background-image: url('https://cdn-icons-png.flaticon.com/128/3046/3046121.png'); } /* TikTok */
         div[role="radiogroup"] label:nth-of-type(4) { background-image: url('https://cdn-icons-png.flaticon.com/128/5968/5968764.png'); } /* Facebook */
         div[role="radiogroup"] label:nth-of-type(5) { background-image: url('https://cdn-icons-png.flaticon.com/128/1384/1384060.png'); } /* YouTube */
-        div[role="radiogroup"] label:nth-of-type(6) { background-image: url('https://cdn-icons-png.flaticon.com/128/5969/5969020.png'); background-size: 30px; } /* X */
+        div[role="radiogroup"] label:nth-of-type(6) { background-image: url('https://cdn-icons-png.flaticon.com/128/5969/5969020.png'); background-size: 35px; } /* X */
         div[role="radiogroup"] label:nth-of-type(7) { background-image: url('https://cdn-icons-png.flaticon.com/128/733/733585.png'); } /* WhatsApp */
-        div[role="radiogroup"] label:nth-of-type(8) { background-image: url('https://cdn-icons-png.flaticon.com/128/10024/10024225.png'); } /* Blog */
+        div[role="radiogroup"] label:nth-of-type(8) { background-image: url('https://cdn-icons-png.flaticon.com/128/4922/4922073.png'); } /* Blog */
 
-        /* ESTADO SELECIONADO (DESTAQUE FORTE) */
-        div[role="radiogroup"] label[data-checked="true"] {
-            background-color: #2563eb !important; /* Azul Forte */
-            border: 2px solid white !important;
-            box-shadow: 0 0 15px rgba(37, 99, 235, 0.8);
-            color: white !important;
-            transform: scale(1.05);
-        }
+        /* HOVER */
         div[role="radiogroup"] label:hover {
             background-color: rgba(255, 255, 255, 0.1);
-            border-color: #60a5fa;
+            transform: translateY(-5px);
         }
 
-        /* 4. BOTÃO GERAR (LETRA ESCURA PARA LER BEM) */
+        /* SELECIONADO (DESTAQUE PROFISSIONAL) */
+        div[role="radiogroup"] label[data-checked="true"] {
+            background-color: rgba(37, 99, 235, 0.2) !important;
+            border: 2px solid #3b82f6 !important;
+            box-shadow: 0 0 15px rgba(59, 130, 246, 0.4);
+            color: #ffffff !important;
+            font-weight: bold;
+        }
+
+        /* 5. LIMPEZA */
+        header[data-testid="stHeader"], #MainMenu, footer {display: none !important;}
+        .block-container {padding-top: 2rem !important; padding-bottom: 5rem !important;}
+        
+        /* 6. BOTÃO DE AÇÃO (CORRIGIDO) */
         .stButton button { 
             width: 100%; border-radius: 12px; font-weight: 800; font-size: 1.1rem;
-            background: linear-gradient(90deg, #fbbf24, #d97706); /* Amarelo/Laranja para contraste */
-            color: #000000 !important; /* Texto Preto */
-            border: none; padding: 0.9rem;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1); transition: all 0.3s;
+            background: linear-gradient(90deg, #fbbf24, #d97706); /* Laranja Ouro */
+            color: black !important; border: none; padding: 0.9rem;
             text-transform: uppercase;
         }
-        .stButton button:hover { transform: scale(1.02); filter: brightness(1.1); }
-        
-        /* Limpeza */
-        header[data-testid="stHeader"], #MainMenu, footer {display: none !important;}
-        .block-container {padding-top: 1rem !important; padding-bottom: 5rem !important;}
     </style>
 """, unsafe_allow_html=True)
 
@@ -118,8 +125,8 @@ st.markdown("""
 LINK_DA_BASE_DE_DADOS = "https://docs.google.com/spreadsheets/d/e/2PACX-1vT_xyKHdsk9og2mRKE5uZBKcANNFtvx8wuUhR3a7gV-TFlZeSuU2wzJB_SjfkUKKIqVhh3LcaRr8Wn3/pub?gid=0&single=true&output=csv"
 LINK_TALLY = "https://tally.so/r/81qLVx"
 
-# --- MOTOR DE IA "FORCE FIELD" ---
-def gerar_conteudo_seguro(prompt):
+# --- MOTOR DE IA QUE NÃO FALHA (FALLBACK) ---
+def gerar_conteudo_robusto(prompt):
     keys = []
     if "GOOGLE_KEYS" in st.secrets: keys = st.secrets["GOOGLE_KEYS"]
     elif "GOOGLE_API_KEY" in st.secrets: keys = [st.secrets["GOOGLE_API_KEY"]]
@@ -127,29 +134,23 @@ def gerar_conteudo_seguro(prompt):
     if not keys: return None, "Sem chaves API."
     random.shuffle(keys)
     
-    # LISTA DE MODELOS (DO MAIS RÁPIDO AO MAIS COMPATÍVEL)
-    # Removemos as versões beta para evitar erros 404
-    modelos_prioridade = ["gemini-1.5-flash", "gemini-1.5-flash-latest", "gemini-1.5-pro", "gemini-1.0-pro", "gemini-pro"]
+    # LISTA DE MODELOS (Se o Flash falhar, tenta o Pro, depois o antigo)
+    # Importante: 'gemini-pro' é o modelo v1.0 que é ultra estável e não dá erro 404
+    modelos = ["gemini-1.5-flash", "gemini-1.5-pro", "gemini-pro"]
     
-    ultimo_erro = ""
-    
-    # Tenta cada modelo com cada chave
-    for modelo in modelos_prioridade:
+    for modelo_nome in modelos:
         for key in keys:
             try:
                 genai.configure(api_key=key)
-                model_ai = genai.GenerativeModel(modelo)
-                response = model_ai.generate_content(prompt)
-                return response, None # Sucesso!
+                model = genai.GenerativeModel(modelo_nome)
+                response = model.generate_content(prompt)
+                return response, None
             except Exception as e:
-                ultimo_erro = str(e)
-                # Se for erro de quota (429), tenta outra chave
-                if "429" in str(e): continue
-                # Se for erro de modelo não encontrado (404), pára esta chave e tenta o próximo modelo
+                # Se for erro 404 (Modelo não existe), sai do loop de chaves e muda de modelo
                 if "404" in str(e): break 
                 continue
-            
-    return None, f"Todos os modelos falharam. Último erro: {ultimo_erro}"
+                
+    return None, "Todos os modelos falharam. Verifique a API Key."
 
 # --- RASTREAMENTO IP ---
 @st.cache_resource
@@ -195,6 +196,7 @@ def check_login():
     except: pass
     
     st.markdown("### 🔒 Login Luso-IA")
+    
     tab1, tab2 = st.tabs(["🔑 Entrar", "🎁 Testar"])
     
     with tab1:
@@ -246,7 +248,7 @@ if check_login():
                 st.stop()
             else: st.warning(f"⚠️ Demo: {restantes} restantes")
 
-    # --- SELETOR DE REDES (Cartões CSS) ---
+    # --- SELETOR DE REDES (FLUTUANTES) ---
     st.write("### 📢 Publicar onde?")
     
     rede_escolhida = st.radio(
@@ -282,18 +284,15 @@ if check_login():
         with st.spinner("A escrever..."):
             prompt = f"""
             Data Atual: {data_hoje}.
-            Atua como Copywriter Sénior da Luso-IA.
-            País: {pais}. Rede: {rede_escolhida}. Tom: {tom}. 
+            Atua como Copywriter Sénior. País: {pais}. Rede: {rede_escolhida}. Tom: {tom}. 
             Negócio: {negocio}. Tópico: {tema}. 
-            Objetivo: Criar conteúdo focado em vendas e cultura local.
             """
             
-            response, erro = gerar_conteudo_seguro(prompt)
+            response, erro = gerar_conteudo_robusto(prompt)
             if response:
                 st.markdown(response.text)
             else:
                 st.error(f"⚠️ Erro IA: {erro}")
-                st.info("A tentar modelos alternativos...")
 
         # 2. IMAGEM
         with st.spinner("A preparar imagens..."):
@@ -302,16 +301,17 @@ if check_login():
                 clean_keywords = f"{negocio} {tema}"
                 try:
                     if response:
-                        vis_resp, _ = gerar_conteudo_seguro(f"Identify 3 English keywords for stock photo: '{negocio} {tema}'. Output ONLY words.")
+                        vis_resp, _ = gerar_conteudo_robusto(f"Identify 3 English keywords for a stock photo about: '{negocio} {tema}' in {pais}. Output ONLY the 3 words.")
                         if vis_resp: clean_keywords = vis_resp.text.strip()
                 except: pass
                 
-                # A. Imagem IA
+                # A. Imagem IA (Segura)
                 seed = random.randint(1, 999999)
                 prompt_img = f"Professional product photography of {clean_keywords}, {pais} aesthetic, cinematic lighting, 4k, photorealistic, no text, object focused, no people"
                 prompt_clean = urllib.parse.quote(prompt_img)
                 url_img = f"https://image.pollinations.ai/prompt/{prompt_clean}?width=1024&height=1024&model=flux&seed={seed}&nologo=true"
                 st.image(url_img, caption="Imagem Gerada (IA)")
+                st.caption("⚠️ Nota: Imagem meramente ilustrativa.")
                 
                 # B. Link Unsplash
                 termo_safe = re.sub(r'[^\w\s]', '', clean_keywords).strip().replace(" ", "-")
