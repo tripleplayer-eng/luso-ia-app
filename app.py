@@ -5,6 +5,7 @@ from streamlit_image_select import image_select
 import time
 import random
 import urllib.parse
+import re  # NOVO: Para limpar emojis e símbolos
 from datetime import datetime
 from streamlit import runtime
 from streamlit.runtime.scriptrunner import get_script_run_ctx
@@ -35,44 +36,40 @@ LINK_TALLY = "https://tally.so/r/81qLVx"
 
 # --- MOTOR DE IA INTELIGENTE ---
 def get_best_model():
-    """Descobre qual o modelo disponível na conta"""
     try:
         models = [m.name.replace('models/', '') for m in genai.list_models() if 'generateContent' in m.supported_generation_methods]
-        # Tenta os melhores por ordem
         for m in ["gemini-1.5-flash", "gemini-1.5-pro", "gemini-1.0-pro", "gemini-pro"]:
             if m in models: return m
         return models[0] if models else "gemini-pro"
-    except:
-        return "gemini-pro"
+    except: return "gemini-pro"
 
 def gerar_conteudo_blindado(prompt):
-    """Tenta todas as chaves e modelos possíveis"""
-    # 1. Recuperar Chaves (Suporta Lista ou Única)
     keys = []
-    if "GOOGLE_KEYS" in st.secrets:
-        keys = st.secrets["GOOGLE_KEYS"]
-    elif "GOOGLE_API_KEY" in st.secrets:
-        keys = [st.secrets["GOOGLE_API_KEY"]]
+    if "GOOGLE_KEYS" in st.secrets: keys = st.secrets["GOOGLE_KEYS"]
+    elif "GOOGLE_API_KEY" in st.secrets: keys = [st.secrets["GOOGLE_API_KEY"]]
     
-    if not keys:
-        return None, "Sem chaves configuradas"
-
+    if not keys: return None, "Sem chaves"
     random.shuffle(keys)
     
-    # 2. Tentar gerar
     last_error = ""
     for key in keys:
         try:
             genai.configure(api_key=key)
-            model_name = get_best_model() # Descobre o modelo para esta chave
+            model_name = get_best_model()
             model = genai.GenerativeModel(model_name)
             response = model.generate_content(prompt)
-            return response, None # Sucesso
+            return response, None
         except Exception as e:
             last_error = str(e)
-            continue # Tenta a próxima chave
-            
+            continue
     return None, last_error
+
+# --- LIMPEZA DE TEXTO (NOVO) ---
+def limpar_para_url(texto):
+    """Remove emojis e caracteres estranhos para o Unsplash não dar erro"""
+    # Remove tudo o que não for letra, número ou espaço
+    texto_limpo = re.sub(r'[^\w\s]', '', texto)
+    return urllib.parse.quote(texto_limpo.strip())
 
 # --- RASTREAMENTO IP ---
 @st.cache_resource
@@ -120,7 +117,6 @@ def check_login():
     except: pass
     
     st.markdown("### 🔒 Login Luso-IA")
-    
     tab1, tab2 = st.tabs(["🔑 Entrar", "🎁 Testar"])
     
     with tab1:
@@ -128,15 +124,12 @@ def check_login():
             email = st.text_input("Email:")
             senha = st.text_input("Senha:", type="password")
             if st.form_submit_button("Entrar"):
-                # Admin Local
                 try:
                     if st.secrets["clientes"]["admin"] == senha:
                         st.session_state.user_type = "PRO"
                         st.session_state.user_email = "Admin"
                         st.rerun()
                 except: pass
-                
-                # Cliente Excel
                 clientes = carregar_clientes()
                 if email in clientes and clientes[email] == senha:
                     st.session_state.user_type = "PRO"
@@ -175,6 +168,13 @@ if check_login():
                 st.stop()
             else: st.warning(f"⚠️ Demo: {restantes} restantes")
 
+    try:
+        # Verificação silenciosa de chaves
+        if "GOOGLE_KEYS" not in st.secrets and "GOOGLE_API_KEY" not in st.secrets:
+             st.error("Erro configuração chaves.")
+             st.stop()
+    except: pass
+
     st.write("### Publicar onde?")
     rede_selecionada = image_select(
         label="",
@@ -212,15 +212,19 @@ if check_login():
             else: st.rerun()
 
         rede_nome = "Rede Social"
-        # (Lógica simplificada dos ícones para poupar espaço)
+        # Mapeamento simplificado
         if "2111463" in rede_selecionada: rede_nome = "Instagram"
         elif "174857" in rede_selecionada: rede_nome = "LinkedIn"
+        elif "5968764" in rede_selecionada: rede_nome = "Facebook"
+        elif "3046121" in rede_selecionada: rede_nome = "TikTok"
+        elif "1384060" in rede_selecionada: rede_nome = "YouTube"
+        elif "5969020" in rede_selecionada: rede_nome = "Twitter"
+        elif "4922073" in rede_selecionada: rede_nome = "Blog"
         elif "733585" in rede_selecionada: rede_nome = "WhatsApp"
-        # ... restantes ...
 
         data_hoje = get_current_date()
 
-        # 1. TEXTO DO POST (COM DIAGNÓSTICO DE ERRO)
+        # 1. TEXTO
         with st.spinner("A escrever..."):
             prompt = f"""
             Data Atual: {data_hoje}.
@@ -230,39 +234,40 @@ if check_login():
             """
             
             response, erro = gerar_conteudo_blindado(prompt)
-            
             if response:
                 st.markdown(response.text)
             else:
-                st.error(f"⚠️ Erro de conexão à IA. Detalhe: {erro}")
-                st.info("Verifique se as chaves API nos 'Secrets' estão válidas.")
+                st.error(f"⚠️ Erro IA: {erro}")
 
-        # 2. INTELIGÊNCIA VISUAL (COM FALLBACK SEGURO)
+        # 2. IMAGEM
         with st.spinner("A preparar imagens..."):
-            clean_keywords = f"{negocio} {tema}" # Valor padrão seguro
             
-            # Tenta melhorar keywords se a IA estiver a funcionar
-            if response:
-                try:
-                    prompt_visual = f"Identify 3 English keywords for a stock photo about: '{negocio} {tema}' in {pais}. Output ONLY the 3 words."
+            # Tentar obter Keywords em Inglês Limpo
+            clean_keywords = ""
+            try:
+                if response:
+                    prompt_visual = f"Output 3 simple English keywords for stock photo: '{negocio} {tema}'. No text. No chat."
                     vis_resp, _ = gerar_conteudo_blindado(prompt_visual)
                     if vis_resp: clean_keywords = vis_resp.text.strip()
-                except: pass
+            except: pass
             
-            # A. Imagem IA
+            # Fallback seguro se a IA falhar
+            if not clean_keywords: clean_keywords = f"{negocio} business"
+            
+            # A. Imagem IA (Pollinations)
             try:
                 seed = random.randint(1, 999999)
                 prompt_img = f"Professional product photography of {clean_keywords}, {pais} aesthetic, cinematic lighting, 4k, photorealistic, no text, object focused, no people"
-                prompt_clean = urllib.parse.quote(prompt_img)
-                url_img = f"https://image.pollinations.ai/prompt/{prompt_clean}?width=1024&height=1024&model=flux&seed={seed}&nologo=true"
-                
+                prompt_encoded = urllib.parse.quote(prompt_img)
+                url_img = f"https://image.pollinations.ai/prompt/{prompt_encoded}?width=1024&height=1024&model=flux&seed={seed}&nologo=true"
                 st.image(url_img, caption="Imagem Gerada (IA)")
             except: pass
 
-            # B. Link Unsplash (GARANTIDO QUE NÃO DÁ 404)
-            # Se clean_keywords estiver vazio, usa o tema original
-            termo_final = clean_keywords if clean_keywords else f"{negocio} {tema}"
-            termo_safe = urllib.parse.quote(termo_final)
+            # B. Link Unsplash (LIMPO E SEGURO)
+            # Função de limpeza remove emojis e caracteres especiais
+            termo_safe = limpar_para_url(clean_keywords)
+            # Se o termo ficar vazio, usa 'business' por defeito
+            if not termo_safe: termo_safe = "business"
             
             st.markdown(f"""
                 <a href="https://unsplash.com/s/photos/{termo_safe}" target="_blank" style="text-decoration:none;">
